@@ -10,7 +10,7 @@ import (
 )
 
 func clientMock(settings internal.Settings) internal.Client {
-	newClient := internal.NewHttpClient(settings)
+	newClient := internal.NewHTTPClient(settings)
 	newClient.CollectMetrics()
 	newClient.SendMetrics()
 	return newClient
@@ -23,9 +23,6 @@ func mockSettings() internal.Settings {
 			Port: 51791,
 		},
 		Agent: internal.Agent{},
-		Metrics: internal.Metrics{
-			RuntimeMetrics: []string{"Alloc"},
-		},
 	}
 	return settings
 }

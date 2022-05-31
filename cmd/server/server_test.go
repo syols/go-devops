@@ -25,9 +25,6 @@ func mockSettings() internal.Settings {
 			Port: 51792,
 		},
 		Agent: internal.Agent{},
-		Metrics: internal.Metrics{
-			RuntimeMetrics: []string{"Alloc"},
-		},
 	}
 	return settings
 }
@@ -59,11 +56,10 @@ func check(t *testing.T, test MockRoute, client http.Client) {
 	if response, respErr := client.Do(request); respErr != nil {
 		t.Errorf(respErr.Error())
 	} else {
-		body, readErr := io.ReadAll(response.Body)
-		if readErr != nil {
-			t.Errorf(respErr.Error())
+		if body, readErr := io.ReadAll(response.Body); readErr == nil {
+			value := string(body)
+			assert.Equal(t, value, test.value, "Test failed")
 		}
-		value := string(body)
-		assert.Equal(t, value, test.value, "Test failed")
+		defer response.Body.Close()
 	}
 }

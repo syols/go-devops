@@ -12,7 +12,7 @@ func main() {
 	var settings internal.Settings
 	settings.LoadSettings(internal.ConfigPath)
 
-	newClient := internal.NewHttpClient(settings)
+	newClient := internal.NewHTTPClient(settings)
 	pollTicker := time.NewTicker(settings.Agent.PollInterval * time.Millisecond)
 	reportTicker := time.NewTicker(settings.Agent.ReportInterval * time.Millisecond)
 

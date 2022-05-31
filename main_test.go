@@ -1,4 +1,4 @@
-package go_devops
+package main
 
 import "testing"
 

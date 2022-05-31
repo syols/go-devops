@@ -14,7 +14,6 @@ const ConfigLoadErrorMessage = "Config load error"
 type Settings struct {
 	Address Address `yaml:"address"`
 	Agent   Agent   `yaml:"agent"`
-	Metrics Metrics `yaml:"metrics"`
 }
 
 type Address struct {
@@ -26,15 +25,6 @@ type Agent struct {
 	PollInterval   time.Duration `yaml:"poll_interval"`
 	ReportInterval time.Duration `yaml:"report_interval"`
 	ClientTimeout  time.Duration `yaml:"client_timeout"`
-}
-
-type CustomMetric struct {
-	Name      string `yaml:"name"`
-	TypeAlias string `yaml:"type_alias"`
-}
-
-type Metrics struct {
-	RuntimeMetrics []string `yaml:"runtime"`
 }
 
 func (settings *Settings) LoadSettings(configPath string) {
