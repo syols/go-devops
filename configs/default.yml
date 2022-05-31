@@ -1,0 +1,40 @@
+# default.yml
+
+address:
+  host: 0.0.0.0
+  port: 8080
+
+agent:
+  poll_interval: 1000
+  report_interval: 10000
+  client_timeout: 3000
+
+metrics:
+  runtime:
+    - Alloc
+    - BuckHashSys
+    - Frees
+    - GCCPUFraction
+    - GCSys
+    - HeapAlloc
+    - HeapIdle
+    - HeapInuse
+    - HeapObjects
+    - HeapReleased
+    - HeapSys
+    - LastGC
+    - Lookups
+    - MCacheInuse
+    - MCacheSys
+    - MSpanInuse
+    - MSpanSys
+    - Mallocs
+    - NextGC
+    - NumForcedGC
+    - NumGC
+    - OtherSys
+    - PauseTotalNs
+    - StackInuse
+    - StackSys
+    - Sys
+    - TotalAlloc
