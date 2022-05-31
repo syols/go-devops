@@ -1,8 +1,7 @@
 package main
 
 import (
-	"github.com/syols/go-devops/internal/client"
-	"github.com/syols/go-devops/internal/utils"
+	"github.com/syols/go-devops/internal"
 	"log"
 	"os"
 	"time"
@@ -10,23 +9,19 @@ import (
 
 func main() {
 	log.SetOutput(os.Stdout)
-	var settings utils.Settings
-	settings.LoadSettings()
+	var settings internal.Settings
+	settings.LoadSettings(internal.ConfigPath)
 
-	newClient := client.NewHttpClient(settings)
+	newClient := internal.NewHttpClient(settings)
 	pollTicker := time.NewTicker(settings.Agent.PollInterval * time.Millisecond)
 	reportTicker := time.NewTicker(settings.Agent.ReportInterval * time.Millisecond)
-
-	var runtimeMetrics = utils.NewGaugeMetricsValues(settings.Metrics.RuntimeMetrics)
-	var count uint64
 
 	for {
 		select {
 		case <-pollTicker.C:
-			client.CollectMetrics(runtimeMetrics)
-			count++
+			newClient.CollectMetrics()
 		case <-reportTicker.C:
-			newClient.SendMetrics(runtimeMetrics, count)
+			newClient.SendMetrics()
 		}
 	}
 }

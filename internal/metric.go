@@ -1,10 +1,8 @@
-package utils
+package internal
 
 import (
 	"errors"
 	"fmt"
-	"reflect"
-	"runtime"
 	"strconv"
 )
 
@@ -13,7 +11,6 @@ const CounterMetric = "counter"
 const PollCountMetricName = "PollCount"
 const RandomValueMetricName = "RandomValue"
 const MetricNotFoundMessage = "metric not found"
-const SkipMessage = "Skip field: %s"
 const IncorrectMetricValue = "incorrect metric value"
 
 type Metric interface {
@@ -23,19 +20,6 @@ type Metric interface {
 
 type GaugeMetricsValues map[string]float64
 type CounterMetricsValues map[string]uint64
-
-func NewGaugeMetricsValues(metrics []string) GaugeMetricsValues {
-	var result = make(GaugeMetricsValues)
-	for _, m := range metrics {
-		result[m] = 0
-	}
-	result[RandomValueMetricName] = 0
-	return result
-}
-
-func NewCounterMetricsValues() CounterMetricsValues {
-	return CounterMetricsValues{PollCountMetricName: 0}
-}
 
 func (g *GaugeMetricsValues) GetValue(name string) (string, error) {
 	if value, ok := (*g)[name]; !ok {
@@ -74,29 +58,4 @@ func (g *CounterMetricsValues) SetValue(name string, value string) error {
 		(*g)[name] += val
 	}
 	return nil
-}
-
-func (g *GaugeMetricsValues) collect() {
-	var stats runtime.MemStats
-	runtime.ReadMemStats(&stats)
-
-	v := reflect.ValueOf(stats)
-	vsType := v.Type()
-
-	for i := 0; i < v.NumField(); i++ {
-		field := vsType.Field(i).Name
-		if _, ok := (*g)[field]; ok {
-			value := v.Field(i).Interface()
-			switch value.(type) {
-			case uint64:
-				(*g)[field] = float64(value.(uint64))
-			case uint32:
-				(*g)[field] = float64(value.(uint32))
-			case float64:
-				(*g)[field] = value.(float64)
-			default:
-				fmt.Printf(SkipMessage, field)
-			}
-		}
-	}
 }
