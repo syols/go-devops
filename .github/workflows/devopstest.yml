@@ -4,7 +4,8 @@ on:
   pull_request:
   push:
     branches:
-      - incr-1
+      - main
+      - incr-3
 
 jobs:
 
