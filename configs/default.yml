@@ -1,0 +1,14 @@
+# default.yml
+
+server:
+  address:
+    host: 0.0.0.0
+    port: 8080
+  restore: true
+  store_interval: 1
+  store_file: "/tmp/devops-metrics-db.json"
+
+agent:
+  poll_interval: 1
+  report_interval: 10
+  client_timeout: 3
