@@ -6,56 +6,59 @@ import (
 	"strconv"
 )
 
-const GaugeMetric = "gauge"
-const CounterMetric = "counter"
-const PollCountMetricName = "PollCount"
-const RandomValueMetricName = "RandomValue"
-const MetricNotFoundMessage = "metric not found"
-const IncorrectMetricValue = "incorrect metric value"
+type Metrics map[string]Metric
+type GaugeMetric float64
+type CounterMetric uint64
 
 type Metric interface {
-	GetValue(name string) (string, error)
-	SetValue(name string, value string) error
+	TypeName() string
+	String() string
+	Add(value string) (metric Metric, err error)
 }
 
-type GaugeMetricsValues map[string]float64
-type CounterMetricsValues map[string]uint64
-
-func (g *GaugeMetricsValues) GetValue(name string) (string, error) {
-	if value, ok := (*g)[name]; !ok {
-		return "", errors.New(MetricNotFoundMessage)
-	} else {
-		return fmt.Sprintf("%.3f", value), nil
+func (m Metrics) getMetric(metricName, metricType string) (Metric, error) {
+	metric, isOk := m[metricName]
+	if !isOk {
+		return nil, errors.New("metric not found")
 	}
+
+	if metricType != metric.TypeName() {
+		return nil, errors.New("metric not found")
+	}
+	return metric, nil
 }
 
-func (g *GaugeMetricsValues) SetValue(name string, value string) error {
-	val, err := strconv.ParseFloat(value, 64)
-	if err != nil {
-		return errors.New(IncorrectMetricValue)
+func (m Metrics) NewMetric(typeName string) (Metric, error) {
+	for _, v := range [...]Metric{GaugeMetric(0), CounterMetric(0)} {
+		if typeName == v.TypeName() {
+			return v, nil
+		}
 	}
-	(*g)[name] = val
-	return nil
+	return nil, errors.New("wrong metric type")
 }
 
-func (g *CounterMetricsValues) GetValue(name string) (string, error) {
-	if value, ok := (*g)[name]; !ok {
-		return "", errors.New(MetricNotFoundMessage)
-	} else {
-		return strconv.FormatUint(value, 10), nil
-	}
+func (c CounterMetric) Add(value string) (metric Metric, err error) {
+	val, _err := strconv.ParseUint(value, 10, 64)
+	return CounterMetric(uint64(c) + val), _err
 }
 
-func (g *CounterMetricsValues) SetValue(name string, value string) error {
-	val, err := strconv.ParseUint(value, 10, 64)
-	if err != nil {
-		return errors.New(IncorrectMetricValue)
-	}
+func (g GaugeMetric) Add(value string) (metric Metric, err error) {
+	val, _err := strconv.ParseFloat(value, 64)
+	return GaugeMetric(val), _err
+}
 
-	if _, ok := (*g)[name]; !ok {
-		(*g)[name] = val
-	} else {
-		(*g)[name] += val
-	}
-	return nil
+func (g GaugeMetric) TypeName() string {
+	return "gauge"
+}
+
+func (c CounterMetric) TypeName() string {
+	return "counter"
+}
+
+func (g GaugeMetric) String() string {
+	return fmt.Sprintf("%.3f", g)
+}
+
+func (c CounterMetric) String() string {
+	return strconv.FormatUint(uint64(c), 10)
 }

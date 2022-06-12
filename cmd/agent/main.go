@@ -9,19 +9,18 @@ import (
 
 func main() {
 	log.SetOutput(os.Stdout)
-	var settings internal.Settings
-	settings.LoadSettings(internal.ConfigPath)
+	settings := internal.NewSettings()
 
-	newClient := internal.NewHTTPClient(settings)
-	pollTicker := time.NewTicker(settings.Agent.PollInterval * time.Millisecond)
-	reportTicker := time.NewTicker(settings.Agent.ReportInterval * time.Millisecond)
+	client := internal.NewHTTPClient(settings)
+	pollTicker := time.NewTicker(settings.Agent.PollInterval)
+	reportTicker := time.NewTicker(settings.Agent.ReportInterval)
 
 	for {
 		select {
 		case <-pollTicker.C:
-			newClient.CollectMetrics()
+			go client.SetMetrics(internal.CollectMetrics())
 		case <-reportTicker.C:
-			newClient.SendMetrics()
+			go client.SendMetrics()
 		}
 	}
 }

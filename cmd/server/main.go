@@ -8,8 +8,6 @@ import (
 
 func main() {
 	log.SetOutput(os.Stdout)
-	var settings internal.Settings
-	settings.LoadSettings(internal.ConfigPath)
-	newServer := internal.NewServer(settings)
-	newServer.Run()
+	server := internal.NewServer(internal.NewSettings())
+	server.Run()
 }

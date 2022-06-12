@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/stretchr/testify/assert"
 	"github.com/syols/go-devops/internal"
 	"log"
 	"net"
@@ -9,18 +10,13 @@ import (
 	"testing"
 )
 
-func clientMock(settings internal.Settings) internal.Client {
-	newClient := internal.NewHTTPClient(settings)
-	newClient.CollectMetrics()
-	newClient.SendMetrics()
-	return newClient
-}
-
-func mockSettings() internal.Settings {
+func newSettingsMock() internal.Settings {
 	settings := internal.Settings{
-		Address: internal.Address{
-			Host: "0.0.0.0",
-			Port: 51791,
+		Server: internal.ServerSettings{
+			Address: internal.Address{
+				Host: "0.0.0.0",
+				Port: 51791,
+			},
 		},
 		Agent: internal.Agent{},
 	}
@@ -30,10 +26,10 @@ func mockSettings() internal.Settings {
 func handlers(t *testing.T) http.Handler {
 	r := http.NewServeMux()
 	r.HandleFunc("/update/gauge/Alloc/0", func(w http.ResponseWriter, r *http.Request) {
-		log.Fatal("Alloc metric not updated")
+		assert.Fail(t, "Alloc metric not updated")
 	})
 	r.HandleFunc("/update/counter/PollCount/0", func(w http.ResponseWriter, r *http.Request) {
-		log.Fatal("Count metric not updated")
+		assert.Fail(t, "Count metric not updated")
 	})
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		log.Printf(r.URL.Path)
@@ -42,22 +38,20 @@ func handlers(t *testing.T) http.Handler {
 }
 
 func TestAgent(t *testing.T) {
-	settings := mockSettings()
+	settings := newSettingsMock()
 	listener, err := net.Listen("tcp", settings.GetAddress())
-	if err != nil {
-		log.Fatal(err)
-	}
+	assert.NoError(t, err)
 
 	server := httptest.NewUnstartedServer(handlers(t))
 	err = server.Listener.Close()
-	if err != nil {
-		log.Fatal(err)
-	}
+	assert.NoError(t, err)
+
 	server.Listener = listener
 	server.Start()
 	defer server.Close()
 
-	newClient := clientMock(settings)
-	newClient.CollectMetrics()
-	newClient.SendMetrics()
+	client := internal.NewHTTPClient(settings)
+	metrics := internal.CollectMetrics()
+	client.SetMetrics(metrics)
+	client.SendMetrics()
 }

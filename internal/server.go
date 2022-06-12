@@ -1,98 +1,82 @@
 package internal
 
 import (
-	"context"
-	"errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"log"
 	"net/http"
 )
 
-const ListenError = "Listen error: %s"
-const StartListening = "Server starts at %s"
-const MetricNotFound = "metric type not found"
-
-const ShutdownError = "Error at server shutdown %v"
-const WriteError = "Write error: %s"
-const UpdateMetricRoute = "/update/{type}/{name}/{value}"
-const ValueMetricRoute = "/value/{type}/{name}"
-const TypeParam = "type"
-const NameParam = "name"
-const ValueParam = "value"
-
 type Server struct {
-	server         http.Server
-	address        string
-	gaugeMetrics   GaugeMetricsValues
-	counterMetrics CounterMetricsValues
-	isCheck        bool
+	server   http.Server
+	metrics  Metrics
+	settings Settings
 }
 
 func NewServer(settings Settings) Server {
 	return Server{
-		address:        settings.GetAddress(),
-		gaugeMetrics:   GaugeMetricsValues{},
-		counterMetrics: CounterMetricsValues{},
-		isCheck:        false,
+		metrics:  Metrics{},
+		settings: settings,
 	}
 }
 
-func (s *Server) Run() context.CancelFunc {
+func (s *Server) Run() {
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
-	router.Post(UpdateMetricRoute, s.postMetricHandler)
-	router.Get(ValueMetricRoute, s.getMetricHandler)
+	router.Post("/update/{type}/{name}/{value}", s.postMetricHandler)
+	router.Get("/value/{type}/{name}", s.getMetricHandler)
 
 	server := http.Server{
-		Addr:    s.address,
+		Addr:    s.settings.GetAddress(),
 		Handler: router,
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	log.Printf(StartListening, s.address)
+	log.Printf("Server starts at %s", server.Addr)
 	if err := server.ListenAndServe(); err != nil {
-		log.Fatalf(ListenError, err)
-	}
-	if err := server.Shutdown(ctx); err != nil {
-		log.Fatalf(ShutdownError, err)
-	}
-	return cancel
-}
-
-func (s *Server) getMetric(metricType string) (Metric, error) {
-	switch metricType {
-	case GaugeMetric:
-		return &s.gaugeMetrics, nil
-	case CounterMetric:
-		return &s.counterMetrics, nil
-	default:
-		return nil, errors.New(MetricNotFound)
+		log.Fatalf("Listen error: %s", err)
 	}
 }
 
 func (s *Server) postMetricHandler(w http.ResponseWriter, r *http.Request) {
-	if metric, getMetricError := s.getMetric(chi.URLParam(r, TypeParam)); getMetricError != nil {
-		http.Error(w, getMetricError.Error(), http.StatusNotImplemented)
-	} else {
-		name := chi.URLParam(r, NameParam)
-		value := chi.URLParam(r, ValueParam)
-		if setError := metric.SetValue(name, value); setError != nil {
-			http.Error(w, setError.Error(), http.StatusBadRequest)
-		}
-		if _, err := w.Write([]byte(value)); err != nil {
-			log.Printf(WriteError, err)
-		}
+	metricType := chi.URLParam(r, "type")
+	metricValue := chi.URLParam(r, "value")
+	metricName := chi.URLParam(r, "name")
+
+	newMetric, err := s.metrics.NewMetric(metricType)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotImplemented)
+		return
 	}
+
+	metric, isOk := s.metrics[metricName]
+	if !isOk {
+		metric = newMetric
+	}
+
+	updatedMetric, err := metric.Add(metricValue)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	s.metrics[metricName] = updatedMetric
 }
 
 func (s *Server) getMetricHandler(w http.ResponseWriter, r *http.Request) {
-	if metric, getMetricError := s.getMetric(chi.URLParam(r, TypeParam)); getMetricError == nil {
-		if value, getError := metric.GetValue(chi.URLParam(r, NameParam)); getError != nil {
-			http.Error(w, getError.Error(), http.StatusNotFound)
-		} else if _, err := w.Write([]byte(value)); err != nil {
-			log.Printf(WriteError, err)
-		}
+	metricType := chi.URLParam(r, "type")
+	if _, err := s.metrics.NewMetric(metricType); err != nil {
+		http.Error(w, err.Error(), http.StatusNotImplemented)
+		return
+	}
+
+	metricName := chi.URLParam(r, "name")
+	metric, err := s.metrics.getMetric(metricName, metricType)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
+	if _, err := w.Write([]byte(metric.String())); err != nil {
+		log.Printf("write metric error: %s", err)
 	}
 }
