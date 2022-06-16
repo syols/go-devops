@@ -5,6 +5,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/syols/go-devops/internal"
+	"github.com/syols/go-devops/internal/settings"
 	"io"
 	"log"
 	"net/http"
@@ -19,36 +20,41 @@ type MockRoute struct { // добавился слайс тестов
 	method string
 }
 
-func mockSettings() internal.Settings {
-	settings := internal.Settings{
-		Server: internal.ServerSettings{
-			Address: internal.Address{
+func mockSettings() settings.Settings {
+	sets := settings.Settings{
+		Server: settings.ServerSettings{
+			Address: settings.Address{
 				Host: "0.0.0.0",
-				Port: 51792,
+				Port: 8081,
 			},
 		},
-		Agent: internal.Agent{},
+		Agent: settings.AgentSettings{},
 	}
-	return settings
+	return sets
 }
 
 func TestServer(t *testing.T) {
-	settings := mockSettings()
+	sets := mockSettings()
 	log.SetOutput(os.Stdout)
-	newServer := internal.NewServer(settings)
+	newServer := internal.NewServer(sets)
 	go newServer.Run()
+	tr := &http.Transport{
+		MaxIdleConns:        10,
+		MaxIdleConnsPerHost: 10,
+	}
+	client := http.Client{Transport: tr}
 	time.Sleep(3 * time.Second)
-	client := http.Client{}
 	check(t, MockRoute{
-		route:  "http://0.0.0.0:51792/update/counter/PollCount/1",
+		route:  "http://0.0.0.0:8081/update/counter/PollCount/1",
 		value:  "",
 		method: http.MethodPost,
 	}, client)
 	check(t, MockRoute{
-		route:  "http://0.0.0.0:51792/value/counter/PollCount",
+		route:  "http://0.0.0.0:8081/value/counter/PollCount",
 		value:  "1",
 		method: http.MethodGet,
 	}, client)
+	client.CloseIdleConnections()
 }
 
 func check(t *testing.T, test MockRoute, client http.Client) {
