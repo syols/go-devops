@@ -5,9 +5,6 @@ import (
 	"github.com/syols/go-devops/internal/metric"
 	"github.com/syols/go-devops/internal/settings"
 	"log"
-	"os"
-	"os/signal"
-	"syscall"
 	"time"
 )
 
@@ -37,9 +34,7 @@ func NewMetricsStorage(sets settings.Settings) MetricsStorage {
 	}
 
 	if sets.Store.Restore {
-		if err := metrics.LoadMetrics(); err != nil {
-			log.Printf(err.Error())
-		}
+		metrics.LoadMetrics()
 	}
 
 	if sets.Store.StoreInterval > 0 {
@@ -47,24 +42,17 @@ func NewMetricsStorage(sets settings.Settings) MetricsStorage {
 		go func() {
 			for {
 				<-ticker.C
-				err := metrics.SaveMetrics()
-				if err != nil {
-					log.Printf(err.Error())
-				}
+				metrics.Save()
 			}
 		}()
 	}
-	metrics.onExit()
 	return metrics
 }
 
 func (m MetricsStorage) SetMetric(metricName string, value metric.Metric) {
 	m.metrics[metricName] = value
-
 	if m.saveInterval == 0 {
-		if err := m.SaveMetrics(); err != nil {
-			log.Printf(err.Error())
-		}
+		m.Save()
 	}
 }
 
@@ -80,7 +68,7 @@ func (m MetricsStorage) GetMetric(metricName, metricType string) (metric.Metric,
 	return value, nil
 }
 
-func (m MetricsStorage) LoadMetrics() error {
+func (m MetricsStorage) LoadMetrics() {
 	metricsPayload, err := m.store.Load()
 	if err != nil {
 		log.Fatalf(err.Error())
@@ -93,27 +81,14 @@ func (m MetricsStorage) LoadMetrics() error {
 		}
 		m.metrics[payload.Name] = value.FromPayload(payload)
 	}
-	return err
 }
 
-func (m MetricsStorage) SaveMetrics() error {
+func (m MetricsStorage) Save() {
 	var payload []metric.Payload
 	for k, v := range m.metrics {
 		payload = append(payload, v.Payload(k))
 	}
-
-	return m.store.Save(payload)
-}
-
-func (m MetricsStorage) onExit() {
-	sign := make(chan os.Signal)
-	signal.Notify(sign, syscall.SIGINT, syscall.SIGTERM)
-	go func() {
-		<-sign
-		log.Print("Exiting...")
-		if err := m.SaveMetrics(); err != nil {
-			log.Printf(err.Error())
-		}
-		os.Exit(0)
-	}()
+	if err := m.store.Save(payload); err != nil {
+		log.Fatalf(err.Error())
+	}
 }

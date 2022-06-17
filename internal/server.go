@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -9,6 +10,10 @@ import (
 	"github.com/syols/go-devops/internal/store"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 type Server struct {
@@ -25,12 +30,12 @@ func NewServer(sets settings.Settings) Server {
 }
 
 func (s *Server) Run() {
+	sign := make(chan os.Signal)
+	signal.Notify(sign, syscall.SIGINT, syscall.SIGTERM)
+	s.shutdown(sign)
+
 	router := chi.NewRouter()
-
 	router.Use(middleware.Logger)
-	//router.Use(middleware.Recoverer)
-	//router.Use(middleware.Compress(5, "gzip"))
-
 	router.Get("/value/{type}/{name}", s.valueMetricHandler)
 	router.Post("/update/{type}/{name}/{value}", s.updateMetricHandler)
 	router.Post("/update/", s.updateJsonMetricHandler)
@@ -158,4 +163,21 @@ func (s *Server) valueJsonMetricHandler(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+func (s *Server) shutdown(sign chan os.Signal) {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	go func() {
+		<-sign
+		log.Print("\n\nExiting")
+		if err := s.server.Shutdown(ctx); err == nil {
+			log.Println("Server shutdown")
+		}
+
+		s.metrics.Save()
+
+		os.Exit(0)
+	}()
 }
