@@ -29,7 +29,7 @@ func WithRestore(value string) Option {
 	return func(s *Settings) {
 		val, err := strconv.ParseBool(value)
 		if err != nil {
-			log.Fatalf("incorrect option WithRestore")
+			log.Printf("incorrect option WithRestore")
 		}
 		log.Printf("Is restore:\t%s", value)
 		s.Store.Restore = val
@@ -47,7 +47,7 @@ func WithPollInterval(value string) Option {
 	return func(s *Settings) {
 		val, err := time.ParseDuration(value)
 		if err != nil {
-			log.Fatalf("incorrect option 'WithPollInterval'")
+			log.Printf("incorrect option 'WithPollInterval'")
 		}
 		log.Printf("Poll interval:\t%s", value)
 		s.Agent.PollInterval = val
@@ -58,7 +58,7 @@ func WithReportInterval(value string) Option {
 	return func(s *Settings) {
 		val, err := time.ParseDuration(value)
 		if err != nil {
-			log.Fatalf("incorrect option 'WithReportInterval'")
+			log.Printf("incorrect option 'WithReportInterval'")
 		}
 		log.Printf("Report interval:\t%s", value)
 		s.Agent.ReportInterval = val
@@ -69,7 +69,7 @@ func WithClientTimeout(value string) Option {
 	return func(s *Settings) {
 		val, err := time.ParseDuration(value)
 		if err != nil {
-			log.Fatalf("incorrect option 'WithClientTimeout'")
+			log.Printf("incorrect option 'WithClientTimeout'")
 		}
 		log.Printf("Client timeout interval:\t%s", value)
 		s.Agent.ClientTimeout = val
@@ -80,7 +80,7 @@ func WithStoreInterval(value string) Option {
 	return func(s *Settings) {
 		val, err := time.ParseDuration(value)
 		if err != nil {
-			log.Fatalf("incorrect option 'WithStoreInterval'")
+			log.Printf("incorrect option 'WithStoreInterval'")
 		}
 		log.Printf("Store interval: %s", value)
 		s.Store.StoreInterval = val

@@ -48,7 +48,7 @@ func (s *Server) Run() {
 
 	log.Printf("Server starts at %s", server.Addr)
 	if err := server.ListenAndServe(); err != nil {
-		log.Fatalf("Listen error: %s", err)
+		log.Printf("Listen error: %s", err)
 	}
 }
 

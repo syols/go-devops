@@ -89,7 +89,7 @@ func (c *Client) post(metricName string, metricValue string, metricAlias string)
 	payload := c.payload(metricAlias, metricName, metricValue)
 	request, err := http.NewRequest(http.MethodPost, endpoint.String(), bytes.NewBufferString(payload))
 	if err != nil {
-		log.Fatalf("Request error: %s", err)
+		log.Printf("Request error: %s", err)
 	}
 	request.Header.Add("Content-Type", "text/plain")
 	request.Header.Add("Content-Length", strconv.Itoa(len(payload)))

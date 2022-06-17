@@ -54,11 +54,11 @@ func (s *Settings) setFromOptions(options ...Option) {
 func (s *Settings) setDefault(configPath string) {
 	file, err := ioutil.ReadFile(configPath)
 	if err != nil {
-		log.Fatalf("Read config error")
+		log.Printf("Read config error")
 	}
 
 	if err := yaml.Unmarshal(file, s); err != nil {
-		log.Fatalf("Config load error")
+		log.Printf("Config load error")
 	}
 }
 
