@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"compress/gzip"
 	"context"
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
@@ -8,10 +9,12 @@ import (
 	"github.com/syols/go-devops/internal/metric"
 	"github.com/syols/go-devops/internal/settings"
 	"github.com/syols/go-devops/internal/store"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 )
@@ -20,6 +23,15 @@ type Server struct {
 	server  http.Server
 	metrics store.MetricsStorage
 	sets    settings.Settings
+}
+
+type gzipWriter struct {
+	http.ResponseWriter
+	Writer io.Writer
+}
+
+func (w gzipWriter) Write(b []byte) (int, error) {
+	return w.Writer.Write(b)
 }
 
 func NewServer(sets settings.Settings) Server {
@@ -36,6 +48,9 @@ func (s *Server) Run() {
 
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
+	router.Use(middleware.Recoverer)
+	router.Use(gzipHandle)
+	router.Get("/", s.infoPageHandler)
 	router.Get("/value/{type}/{name}", s.valueMetricHandler)
 	router.Post("/update/{type}/{name}/{value}", s.updateMetricHandler)
 	router.Post("/update/", s.updateJsonMetricHandler)
@@ -79,6 +94,13 @@ func (s *Server) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.metrics.SetMetric(metricName, updatedMetric)
+}
+
+func (s *Server) infoPageHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "text/plain")
+	if _, err := w.Write([]byte("OK")); err != nil {
+		log.Printf("write error: %s", err)
+	}
 }
 
 func (s *Server) valueMetricHandler(w http.ResponseWriter, r *http.Request) {
@@ -165,6 +187,30 @@ func (s *Server) valueJsonMetricHandler(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
+func gzipHandle(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		gz, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
+		if err != nil {
+			log.Printf(err.Error())
+			return
+		}
+		defer func(gz *gzip.Writer) {
+			err := gz.Close()
+			if err != nil {
+				log.Printf(err.Error())
+			}
+		}(gz)
+
+		w.Header().Set("Content-Encoding", "gzip")
+		next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
+	})
+}
+
 func (s *Server) shutdown(sign chan os.Signal) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
@@ -175,9 +221,7 @@ func (s *Server) shutdown(sign chan os.Signal) {
 		if err := s.server.Shutdown(ctx); err == nil {
 			log.Println("Server shutdown")
 		}
-
 		s.metrics.Save()
-
 		os.Exit(0)
 	}()
 }
