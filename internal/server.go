@@ -97,7 +97,7 @@ func (s *Server) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) infoPageHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "text/plain")
+	w.Header().Add("Content-Type", "text/html")
 	if _, err := w.Write([]byte("OK")); err != nil {
 		log.Printf("write error: %s", err)
 	}
