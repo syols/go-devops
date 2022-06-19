@@ -71,14 +71,14 @@ func (m MetricsStorage) GetMetric(metricName, metricType string) (metric.Metric,
 func (m MetricsStorage) LoadMetrics() {
 	metricsPayload, err := m.store.Load()
 	if err != nil {
-		log.Printf(err.Error())
+		log.Print(err.Error())
 		return
 	}
 
 	for _, payload := range metricsPayload {
 		value, err := metric.NewMetric(payload.MetricType)
 		if err != nil {
-			log.Printf(err.Error())
+			log.Print(err.Error())
 		}
 		m.metrics[payload.Name] = value.FromPayload(payload)
 	}
@@ -90,6 +90,6 @@ func (m MetricsStorage) Save() {
 		payload = append(payload, v.Payload(k))
 	}
 	if err := m.store.Save(payload); err != nil {
-		log.Printf(err.Error())
+		log.Print(err.Error())
 	}
 }

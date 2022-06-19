@@ -41,7 +41,7 @@ func NewSettings() (settings Settings) {
 	log.Print("Settings:")
 	settings.setDefault("configs/default.yml")
 	settings.setFromOptions(newVariables().getOptions()...)
-	log.Printf(settings.String())
+	log.Print(settings.String())
 	return settings
 }
 

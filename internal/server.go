@@ -42,7 +42,7 @@ func NewServer(sets settings.Settings) Server {
 }
 
 func (s *Server) Run() {
-	sign := make(chan os.Signal)
+	sign := make(chan os.Signal, 1)
 	signal.Notify(sign, syscall.SIGINT, syscall.SIGTERM)
 	s.shutdown(sign)
 
@@ -53,8 +53,8 @@ func (s *Server) Run() {
 	router.Get("/", s.infoPageHandler)
 	router.Get("/value/{type}/{name}", s.valueMetricHandler)
 	router.Post("/update/{type}/{name}/{value}", s.updateMetricHandler)
-	router.Post("/update/", s.updateJsonMetricHandler)
-	router.Post("/value/", s.valueJsonMetricHandler)
+	router.Post("/update/", s.updateJSONMetricHandler)
+	router.Post("/value/", s.valueJSONMetricHandler)
 
 	server := http.Server{
 		Addr:    s.sets.GetAddress(),
@@ -97,7 +97,7 @@ func (s *Server) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) infoPageHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "text/plain")
+	w.Header().Add("Content-Type", "text/html")
 	if _, err := w.Write([]byte("OK")); err != nil {
 		log.Printf("write error: %s", err)
 	}
@@ -123,7 +123,7 @@ func (s *Server) valueMetricHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (s *Server) updateJsonMetricHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) updateJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("Content-Type") != "application/json" {
 		http.Error(w, "wrong content type", http.StatusUnsupportedMediaType)
 		return
@@ -155,7 +155,7 @@ func (s *Server) updateJsonMetricHandler(w http.ResponseWriter, r *http.Request)
 	s.metrics.SetMetric(metricPayload.Name, oldMetric.FromPayload(metricPayload))
 }
 
-func (s *Server) valueJsonMetricHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) valueJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Header.Get("Content-Type") != "application/json" {
 		http.Error(w, "wrong content type", http.StatusUnsupportedMediaType)
 		return
@@ -202,7 +202,7 @@ func gzipHandle(next http.Handler) http.Handler {
 		defer func(gz *gzip.Writer) {
 			err := gz.Close()
 			if err != nil {
-				log.Printf(err.Error())
+				log.Print(err.Error())
 			}
 		}(gz)
 
@@ -217,7 +217,7 @@ func (s *Server) shutdown(sign chan os.Signal) {
 
 	go func() {
 		<-sign
-		log.Print("\n\nExiting")
+		log.Println("Exiting")
 		if err := s.server.Shutdown(ctx); err == nil {
 			log.Println("Server shutdown")
 		}

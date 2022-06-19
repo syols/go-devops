@@ -98,11 +98,11 @@ func (c *Client) post(metricName string, metricValue string, metricAlias string)
 		log.Printf("Request error: %s", err)
 		return
 	}
-
+	defer c.Client.CloseIdleConnections()
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
-			log.Printf(err.Error())
+			log.Print(err.Error())
 		}
 	}(response.Body)
 	log.Printf(metricName, response.Status)

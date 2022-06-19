@@ -42,7 +42,7 @@ func (f FileStore) Save(value []metric.Payload) error {
 		log.Printf("Save metrics to %s: %s", f.storeFile, string(jsonBytes))
 		err := file.Close()
 		if err != nil {
-			log.Printf(err.Error())
+			log.Print(err.Error())
 		}
 	}(file)
 
