@@ -8,10 +8,10 @@ type Metric interface {
 	TypeName() string
 
 	String() string
-	Payload(name string) Payload
+	Payload(name string, key string) Payload
 
 	FromString(value string) (Metric, error)
-	FromPayload(value Payload) Metric
+	FromPayload(value Payload, key string) (Metric, error)
 }
 
 type Payload struct {
@@ -19,6 +19,7 @@ type Payload struct {
 	MetricType   string   `json:"type"`
 	CounterValue *uint64  `json:"delta,omitempty"`
 	GaugeValue   *float64 `json:"value,omitempty"`
+	Hash         string   `json:"hash,omitempty"`
 }
 
 func NewMetric(typeName string) (Metric, error) {

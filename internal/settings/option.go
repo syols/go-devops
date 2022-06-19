@@ -90,7 +90,7 @@ func WithStoreInterval(value string) Option {
 func WithKey(value string) Option {
 	return func(s *Settings) {
 		log.Printf("Sha256 key:\t%s", value)
-		s.Server.Key = &value
+		s.Server.Key = value
 	}
 }
 

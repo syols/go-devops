@@ -25,12 +25,12 @@ type Server struct {
 	sets    settings.Settings
 }
 
-type gzipWriter struct {
+type GzipWriter struct {
 	http.ResponseWriter
 	Writer io.Writer
 }
 
-func (w gzipWriter) Write(b []byte) (int, error) {
+func (w GzipWriter) Write(b []byte) (int, error) {
 	return w.Writer.Write(b)
 }
 
@@ -49,7 +49,7 @@ func (s *Server) Run() {
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
-	router.Use(gzipHandle)
+	router.Use(GzipHandle)
 	router.Get("/", s.infoPageHandler)
 	router.Get("/value/{type}/{name}", s.valueMetricHandler)
 	router.Post("/update/{type}/{name}/{value}", s.updateMetricHandler)
@@ -152,7 +152,12 @@ func (s *Server) updateJsonMetricHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	s.metrics.SetMetric(metricPayload.Name, oldMetric.FromPayload(metricPayload))
+	payload, err := oldMetric.FromPayload(metricPayload, s.sets.Server.Key)
+	if err != nil {
+		http.Error(w, "wrong hash", http.StatusBadRequest)
+		return
+	}
+	s.metrics.SetMetric(metricPayload.Name, payload)
 }
 
 func (s *Server) valueJsonMetricHandler(w http.ResponseWriter, r *http.Request) {
@@ -181,13 +186,13 @@ func (s *Server) valueJsonMetricHandler(w http.ResponseWriter, r *http.Request) 
 	}
 	w.Header().Add("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)
-	if err := encoder.Encode(oldMetric.Payload(metricPayload.Name)); err != nil {
+	if err := encoder.Encode(oldMetric.Payload(metricPayload.Name, s.sets.Server.Key)); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
 
-func gzipHandle(next http.Handler) http.Handler {
+func GzipHandle(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			next.ServeHTTP(w, r)
@@ -199,6 +204,7 @@ func gzipHandle(next http.Handler) http.Handler {
 			log.Printf(err.Error())
 			return
 		}
+
 		defer func(gz *gzip.Writer) {
 			err := gz.Close()
 			if err != nil {
@@ -207,7 +213,7 @@ func gzipHandle(next http.Handler) http.Handler {
 		}(gz)
 
 		w.Header().Set("Content-Encoding", "gzip")
-		next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
+		next.ServeHTTP(GzipWriter{ResponseWriter: w, Writer: gz}, r)
 	})
 }
 

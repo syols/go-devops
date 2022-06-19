@@ -17,6 +17,7 @@ type MetricsStorage struct {
 	metrics      map[string]metric.Metric
 	store        Store
 	saveInterval time.Duration
+	key          string
 }
 
 func NewStore(sets settings.Settings) Store {
@@ -31,6 +32,7 @@ func NewMetricsStorage(sets settings.Settings) MetricsStorage {
 		metrics:      map[string]metric.Metric{},
 		store:        NewStore(sets),
 		saveInterval: sets.Store.StoreInterval,
+		key:          sets.Server.Key,
 	}
 
 	if sets.Store.Restore {
@@ -69,25 +71,28 @@ func (m MetricsStorage) GetMetric(metricName, metricType string) (metric.Metric,
 }
 
 func (m MetricsStorage) LoadMetrics() {
-	metricsPayload, err := m.store.Load()
+	payloads, err := m.store.Load()
 	if err != nil {
 		log.Printf(err.Error())
 		return
 	}
 
-	for _, payload := range metricsPayload {
+	for _, payload := range payloads {
 		value, err := metric.NewMetric(payload.MetricType)
 		if err != nil {
 			log.Printf(err.Error())
 		}
-		m.metrics[payload.Name] = value.FromPayload(payload)
+
+		if metricFromPayload, err := value.FromPayload(payload, m.key); err == nil {
+			m.metrics[payload.Name] = metricFromPayload
+		}
 	}
 }
 
 func (m MetricsStorage) Save() {
 	var payload []metric.Payload
 	for k, v := range m.metrics {
-		payload = append(payload, v.Payload(k))
+		payload = append(payload, v.Payload(k, m.key))
 	}
 	if err := m.store.Save(payload); err != nil {
 		log.Printf(err.Error())

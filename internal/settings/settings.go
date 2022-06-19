@@ -16,7 +16,7 @@ type Settings struct {
 
 type ServerSettings struct {
 	Address Address `yaml:"address"`
-	Key     *string `yaml:"key,omitempty"`
+	Key     string  `yaml:"key"`
 }
 
 type AgentSettings struct {
