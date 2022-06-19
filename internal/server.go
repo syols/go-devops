@@ -49,8 +49,9 @@ func (s *Server) Run() {
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
-	router.Use(gzipHandle)
-	router.Get("/", s.infoPageHandler)
+	router.Use(compressMiddleware)
+
+	router.Get("/", s.healthcheckHandler)
 	router.Get("/value/{type}/{name}", s.valueMetricHandler)
 	router.Post("/update/{type}/{name}/{value}", s.updateMetricHandler)
 	router.Post("/update/", s.updateJSONMetricHandler)
@@ -72,23 +73,23 @@ func (s *Server) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
 	metricValue := chi.URLParam(r, "value")
 	metricName := chi.URLParam(r, "name")
 
-	result, err := metric.NewMetric(metricType)
+	createdMetric, err := metric.NewMetric(metricType)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotImplemented)
 		return
 	}
 
-	oldMetric, err := s.metrics.GetMetric(metricName, metricType)
+	currentMetric, err := s.metrics.GetMetric(metricName, metricType)
 	if err != nil {
-		oldMetric = result
+		currentMetric = createdMetric
 	}
 
-	if result.TypeName() != oldMetric.TypeName() {
-		http.Error(w, "wrong result type", http.StatusBadRequest)
+	if createdMetric.TypeName() != currentMetric.TypeName() {
+		http.Error(w, "wrong createdMetric type", http.StatusBadRequest)
 		return
 	}
 
-	updatedMetric, err := oldMetric.FromString(metricValue)
+	updatedMetric, err := currentMetric.FromString(metricValue)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -96,7 +97,7 @@ func (s *Server) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
 	s.metrics.SetMetric(metricName, updatedMetric)
 }
 
-func (s *Server) infoPageHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) healthcheckHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "text/html")
 	if _, err := w.Write([]byte("OK")); err != nil {
 		log.Printf("write error: %s", err)
@@ -112,14 +113,14 @@ func (s *Server) valueMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	oldMetric, err := s.metrics.GetMetric(metricName, metricType)
+	currentMetric, err := s.metrics.GetMetric(metricName, metricType)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
-	if _, err := w.Write([]byte(oldMetric.String())); err != nil {
-		log.Printf("write oldMetric error: %s", err)
+	if _, err := w.Write([]byte(currentMetric.String())); err != nil {
+		log.Printf("write currentMetric error: %s", err)
 	}
 }
 
@@ -136,23 +137,29 @@ func (s *Server) updateJSONMetricHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	newMetric, err := metric.NewMetric(metricPayload.MetricType)
+	createdMetric, err := metric.NewMetric(metricPayload.MetricType)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotImplemented)
 		return
 	}
 
-	oldMetric, err := s.metrics.GetMetric(metricPayload.Name, metricPayload.MetricType)
+	currentMetric, err := s.metrics.GetMetric(metricPayload.Name, metricPayload.MetricType)
 	if err != nil {
-		oldMetric = newMetric
+		currentMetric = createdMetric
 	}
 
-	if newMetric.TypeName() != oldMetric.TypeName() {
+	if createdMetric.TypeName() != currentMetric.TypeName() {
 		http.Error(w, "wrong metric type", http.StatusBadRequest)
 		return
 	}
+	s.metrics.SetMetric(metricPayload.Name, currentMetric.FromPayload(metricPayload))
 
-	s.metrics.SetMetric(metricPayload.Name, oldMetric.FromPayload(metricPayload))
+	w.Header().Add("Content-Type", "application/json")
+	encoder := json.NewEncoder(w)
+	if err := encoder.Encode(currentMetric.Payload(metricPayload.Name)); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func (s *Server) valueJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
@@ -174,20 +181,21 @@ func (s *Server) valueJSONMetricHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	oldMetric, err := s.metrics.GetMetric(metricPayload.Name, metricPayload.MetricType)
+	currentMetric, err := s.metrics.GetMetric(metricPayload.Name, metricPayload.MetricType)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
+
 	w.Header().Add("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)
-	if err := encoder.Encode(oldMetric.Payload(metricPayload.Name)); err != nil {
+	if err := encoder.Encode(currentMetric.Payload(metricPayload.Name)); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
 
-func gzipHandle(next http.Handler) http.Handler {
+func compressMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			next.ServeHTTP(w, r)
@@ -196,7 +204,7 @@ func gzipHandle(next http.Handler) http.Handler {
 
 		gz, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
 		if err != nil {
-			log.Printf(err.Error())
+			log.Print(err.Error())
 			return
 		}
 		defer func(gz *gzip.Writer) {

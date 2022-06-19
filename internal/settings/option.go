@@ -14,10 +14,6 @@ func WithAddress(address string) Option {
 		if host, port, err := net.SplitHostPort(address); err == nil {
 			if port, err := strconv.ParseUint(port, 0, 16); err == nil {
 				log.Printf("Address:\t%s", address)
-				if host == "localhost" {
-					host = "0.0.0.0"
-				}
-
 				s.Server.Address.Host = host
 				s.Server.Address.Port = uint16(port)
 			}

@@ -9,7 +9,6 @@ import (
 
 func main() {
 	log.SetOutput(os.Stdout)
-	sets := settings.NewSettings()
-	server := internal.NewServer(sets)
+	server := internal.NewServer(settings.NewSettings())
 	server.Run()
 }

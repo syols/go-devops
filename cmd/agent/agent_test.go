@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/syols/go-devops/internal"
 	"github.com/syols/go-devops/internal/settings"
 	"log"
@@ -11,12 +12,19 @@ import (
 	"testing"
 )
 
-func newSettingsMock() settings.Settings {
+func mockSettings(t *testing.T) settings.Settings {
+	list, err := net.Listen("tcp", ":0")
+	require.NoError(t, err)
+
+	port := list.Addr().(*net.TCPAddr).Port
+	err = list.Close()
+	require.NoError(t, err)
+
 	sets := settings.Settings{
 		Server: settings.ServerSettings{
 			Address: settings.Address{
 				Host: "0.0.0.0",
-				Port: 8081,
+				Port: uint16(port),
 			},
 		},
 		Agent: settings.AgentSettings{},
@@ -39,7 +47,7 @@ func handlers(t *testing.T) http.Handler {
 }
 
 func TestAgent(t *testing.T) {
-	sets := newSettingsMock()
+	sets := mockSettings(t)
 	listener, err := net.Listen("tcp", sets.GetAddress())
 	assert.NoError(t, err)
 

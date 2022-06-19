@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/syols/go-devops/internal/metric"
 	"github.com/syols/go-devops/internal/settings"
-	"io"
 	"log"
 	"math/rand"
 	"net/http"
@@ -98,13 +97,12 @@ func (c *Client) post(metricName string, metricValue string, metricAlias string)
 		log.Printf("Request error: %s", err)
 		return
 	}
+	
+	err = response.Body.Close()
+	if err != nil {
+		log.Print(err.Error())
+	}
 	defer c.Client.CloseIdleConnections()
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
-		if err != nil {
-			log.Print(err.Error())
-		}
-	}(response.Body)
 	log.Printf(metricName, response.Status)
 }
 
