@@ -152,11 +152,18 @@ func (s *Server) updateJSONMetricHandler(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "wrong metric type", http.StatusBadRequest)
 		return
 	}
-	s.metrics.SetMetric(metricPayload.Name, currentMetric.FromPayload(metricPayload))
+
+	payload, err := currentMetric.FromPayload(metricPayload, s.sets.Server.Key)
+	if err != nil {
+		http.Error(w, "wrong metric type", http.StatusBadRequest)
+		return
+	}
+
+	s.metrics.SetMetric(metricPayload.Name, payload)
 
 	w.Header().Add("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)
-	if err := encoder.Encode(currentMetric.Payload(metricPayload.Name)); err != nil {
+	if err := encoder.Encode(currentMetric.Payload(metricPayload.Name, s.sets.Server.Key)); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -189,7 +196,7 @@ func (s *Server) valueJSONMetricHandler(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Add("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)
-	if err := encoder.Encode(currentMetric.Payload(metricPayload.Name)); err != nil {
+	if err := encoder.Encode(currentMetric.Payload(metricPayload.Name, s.sets.Server.Key)); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
