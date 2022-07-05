@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"github.com/syols/go-devops/internal/settings"
 	"gopkg.in/yaml.v2"
 	"testing"
 )
@@ -21,8 +22,8 @@ metrics:
     - Alloc
     - BuckHashSys
 `
-	settings := Settings{}
-	if err := yaml.Unmarshal([]byte(config), &settings); err != nil {
+	sets := settings.Settings{}
+	if err := yaml.Unmarshal([]byte(config), &sets); err != nil {
 		t.Errorf(err.Error())
 	}
 }

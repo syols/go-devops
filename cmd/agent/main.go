@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/syols/go-devops/internal"
+	"github.com/syols/go-devops/internal/settings"
 	"log"
 	"os"
 	"time"
@@ -9,11 +10,10 @@ import (
 
 func main() {
 	log.SetOutput(os.Stdout)
-	settings := internal.NewSettings()
-
-	client := internal.NewHTTPClient(settings)
-	pollTicker := time.NewTicker(settings.Agent.PollInterval)
-	reportTicker := time.NewTicker(settings.Agent.ReportInterval)
+	sets := settings.NewSettings()
+	client := internal.NewHTTPClient(sets)
+	pollTicker := time.NewTicker(sets.Agent.PollInterval)
+	reportTicker := time.NewTicker(sets.Agent.ReportInterval)
 
 	for {
 		select {

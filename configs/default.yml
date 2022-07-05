@@ -4,11 +4,15 @@ server:
   address:
     host: 0.0.0.0
     port: 8080
-  restore: true
-  store_interval: 1
-  store_file: "/tmp/devops-metrics-db.json"
+  key: null
 
 agent:
-  poll_interval: 1
-  report_interval: 10
-  client_timeout: 3
+  poll_interval: 1s
+  report_interval: 10s
+  client_timeout: 1s
+
+store:
+  database: null
+  store_file: "/tmp/devops-metrics-db.json"
+  restore: false
+  store_interval: 300s
