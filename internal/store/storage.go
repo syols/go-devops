@@ -11,6 +11,7 @@ import (
 type Store interface {
 	Save(value []metric.Payload) error
 	Load() ([]metric.Payload, error)
+	IsOk() bool
 }
 
 type MetricsStorage struct {
@@ -21,6 +22,9 @@ type MetricsStorage struct {
 }
 
 func NewStore(sets settings.Settings) Store {
+	if sets.Store.DatabaseConnectionString != nil {
+		return NewDatabaseStore(*sets.Store.DatabaseConnectionString)
+	}
 	if sets.Store.StoreFile != nil {
 		return NewFileStore(*sets.Store.StoreFile)
 	}
@@ -94,4 +98,8 @@ func (m MetricsStorage) Save() {
 	if err := m.store.Save(payload); err != nil {
 		log.Print(err.Error())
 	}
+}
+
+func (m MetricsStorage) IsOk() bool {
+	return m.store.IsOk()
 }

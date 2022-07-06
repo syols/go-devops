@@ -52,6 +52,7 @@ func (s *Server) Run() {
 	router.Use(compressMiddleware)
 
 	router.Get("/", s.healthcheckHandler)
+	router.Get("/ping", s.pingHandler)
 	router.Get("/value/{type}/{name}", s.valueMetricHandler)
 	router.Post("/update/{type}/{name}/{value}", s.updateMetricHandler)
 	router.Post("/update/", s.updateJSONMetricHandler)
@@ -95,6 +96,13 @@ func (s *Server) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.metrics.SetMetric(metricName, updatedMetric)
+}
+
+func (s *Server) pingHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "text/html")
+	if !s.metrics.IsOk() {
+		http.Error(w, "store is not available", http.StatusInternalServerError)
+	}
 }
 
 func (s *Server) healthcheckHandler(w http.ResponseWriter, r *http.Request) {
