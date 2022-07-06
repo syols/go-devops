@@ -26,7 +26,8 @@ func (g GaugeMetric) FromPayload(value Payload, key *string) (Metric, error) {
 		return value.GaugeValue, errors.New("wrong type name")
 	}
 
-	if g.Payload(value.Name, key).Hash != value.Hash {
+	payload := g.Payload(value.Name, key)
+	if payload.Hash != value.Hash {
 		return value.GaugeValue, errors.New("wrong hash sum")
 	}
 	return value.GaugeValue, nil

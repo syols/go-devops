@@ -26,7 +26,9 @@ func (c CounterMetric) FromPayload(value Payload, key *string) (Metric, error) {
 	}
 
 	result := CounterMetric(uint64(c) + uint64(*value.CounterValue))
-	if c.Payload(value.Name, key).Hash != value.Hash {
+
+	payload := c.Payload(value.Name, key)
+	if payload.Hash != value.Hash {
 		return result, errors.New("wrong hash sum")
 	}
 	return result, nil
