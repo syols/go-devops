@@ -21,10 +21,15 @@ func (c CounterMetric) FromString(value string) (Metric, error) {
 }
 
 func (c CounterMetric) FromPayload(value Payload, key *string) (Metric, error) {
-	if c.Payload(value.Name, key).Hash != value.Hash {
-		return nil, errors.New("wrong hash sum")
+	if value.CounterValue.TypeName() != value.MetricType {
+		return value.CounterValue, errors.New("wrong type name")
 	}
-	return CounterMetric(uint64(c) + uint64(*value.CounterValue)), nil
+
+	result := CounterMetric(uint64(c) + uint64(*value.CounterValue))
+	if c.Payload(value.Name, key).Hash != value.Hash {
+		return result, errors.New("wrong hash sum")
+	}
+	return result, nil
 }
 
 func (c CounterMetric) Payload(name string, key *string) Payload {

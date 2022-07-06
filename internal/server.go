@@ -155,7 +155,7 @@ func (s *Server) updateJSONMetricHandler(w http.ResponseWriter, r *http.Request)
 
 	payload, err := currentMetric.FromPayload(metricPayload, s.sets.Server.Key)
 	if err != nil {
-		http.Error(w, "wrong metric type", http.StatusBadRequest)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 

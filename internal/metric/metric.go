@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"log"
 )
 
 type Metric interface {
@@ -36,7 +37,10 @@ func (p *Payload) Metric() (metric Metric) {
 }
 
 func (p *Payload) String() string {
-	return fmt.Sprintf("%s:%s:%d", p.Name, p.MetricType, p.Metric())
+	if p.MetricType == GaugeMetric(0).TypeName() {
+		return fmt.Sprintf("%s:gauge:%f", p.Name, *p.GaugeValue)
+	}
+	return fmt.Sprintf("%s:counter:%d", p.Name, *p.CounterValue)
 }
 
 func NewPayload(name string, key *string, value Metric) Payload {
@@ -57,8 +61,10 @@ func NewPayload(name string, key *string, value Metric) Payload {
 
 	if key != nil {
 		h := hmac.New(sha256.New, []byte(*key))
-		h.Write([]byte(payload.String()))
-		payload.Hash = string(h.Sum(nil))
+		hashString := payload.String()
+		h.Write([]byte(hashString))
+		payload.Hash = fmt.Sprintf("%x", h.Sum(nil))
+		log.Printf("Hash from %s = %s", hashString, payload.Hash)
 	}
 
 	return payload
