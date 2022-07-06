@@ -100,8 +100,10 @@ func (s *Server) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) pingHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "text/html")
-	if !s.metrics.IsOk() {
+	err := s.metrics.Check()
+	if err != nil {
 		http.Error(w, "store is not available", http.StatusInternalServerError)
+		return
 	}
 }
 

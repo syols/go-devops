@@ -28,8 +28,10 @@ func (d DatabaseStore) Load() ([]metric.Payload, error) {
 	return payload, nil
 }
 
-func (d DatabaseStore) IsOk() bool {
+func (d DatabaseStore) Check() error {
 	connection, err := pgx.Connect(context.Background(), d.connectionString)
-	defer connection.Close(context.Background())
-	return err == nil
+	if err == nil {
+		defer connection.Close(context.Background())
+	}
+	return err
 }

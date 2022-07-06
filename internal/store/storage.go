@@ -11,7 +11,7 @@ import (
 type Store interface {
 	Save(value []metric.Payload) error
 	Load() ([]metric.Payload, error)
-	IsOk() bool
+	Check() error
 }
 
 type MetricsStorage struct {
@@ -100,6 +100,6 @@ func (m MetricsStorage) Save() {
 	}
 }
 
-func (m MetricsStorage) IsOk() bool {
-	return m.store.IsOk()
+func (m MetricsStorage) Check() error {
+	return m.store.Check()
 }

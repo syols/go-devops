@@ -2,7 +2,6 @@ package store
 
 import (
 	"encoding/json"
-	"errors"
 	"github.com/syols/go-devops/internal/metric"
 	"io/ioutil"
 	"log"
@@ -61,7 +60,7 @@ func (f FileStore) Load() ([]metric.Payload, error) {
 	return payload, err
 }
 
-func (f FileStore) IsOk() bool {
+func (f FileStore) Check() error {
 	_, err := os.Stat(f.storeFile)
-	return !errors.Is(err, os.ErrPermission)
+	return err
 }
