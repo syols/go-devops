@@ -56,6 +56,7 @@ func (s *Server) Run() {
 	router.Get("/value/{type}/{name}", s.valueMetricHandler)
 	router.Post("/update/{type}/{name}/{value}", s.updateMetricHandler)
 	router.Post("/update/", s.updateJSONMetricHandler)
+	router.Post("/updates/", s.updatesJSONMetricHandler)
 	router.Post("/value/", s.valueJSONMetricHandler)
 
 	server := http.Server{
@@ -147,9 +148,6 @@ func (s *Server) updateJSONMetricHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	val, _ := json.Marshal(metricPayload)
-	log.Printf(string(val))
-
 	createdMetric, err := metric.NewMetric(metricPayload.MetricType)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotImplemented)
@@ -180,6 +178,47 @@ func (s *Server) updateJSONMetricHandler(w http.ResponseWriter, r *http.Request)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+}
+
+func (s *Server) updatesJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "wrong content type", http.StatusUnsupportedMediaType)
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	var metricPayloads []metric.Payload
+	if err := decoder.Decode(&metricPayloads); err != nil {
+		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+		return
+	}
+
+	for _, metricPayload := range metricPayloads {
+		createdMetric, err := metric.NewMetric(metricPayload.MetricType)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotImplemented)
+			return
+		}
+
+		currentMetric, err := s.metrics.GetMetric(metricPayload.Name, metricPayload.MetricType)
+		if err != nil {
+			currentMetric = createdMetric
+		}
+
+		if createdMetric.TypeName() != currentMetric.TypeName() {
+			http.Error(w, "wrong metric type", http.StatusBadRequest)
+			return
+		}
+
+		payload, err := currentMetric.FromPayload(metricPayload, s.sets.Server.Key)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		s.metrics.SetMetric(metricPayload.Name, payload)
+	}
+	w.Header().Add("Content-Type", "application/json")
 }
 
 func (s *Server) valueJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
