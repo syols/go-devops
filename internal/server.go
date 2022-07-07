@@ -222,6 +222,7 @@ func (s *Server) updatesJSONMetricHandler(w http.ResponseWriter, r *http.Request
 
 		s.metrics.SetMetric(metricPayload.Name, payload)
 	}
+
 	w.Header().Add("Content-Type", "application/json")
 	err := json.NewEncoder(w).Encode(metricPayloads)
 	if err != nil {
