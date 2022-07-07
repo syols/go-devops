@@ -68,3 +68,7 @@ func (f FileStore) Check() error {
 	_, err := os.Stat(f.storeFile)
 	return err
 }
+
+func (f FileStore) Type() string {
+	return "file"
+}

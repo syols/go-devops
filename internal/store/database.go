@@ -83,3 +83,7 @@ func (d DatabaseStore) Check() error {
 	}
 	return err
 }
+
+func (d DatabaseStore) Type() string {
+	return "database"
+}

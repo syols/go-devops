@@ -11,6 +11,7 @@ import (
 type Store interface {
 	Save(value []metric.Payload) error
 	Load() ([]metric.Payload, error)
+	Type() string
 	Check() error
 }
 
@@ -57,7 +58,7 @@ func NewMetricsStorage(sets settings.Settings) MetricsStorage {
 
 func (m MetricsStorage) SetMetric(metricName string, value metric.Metric) {
 	m.metrics[metricName] = value
-	if m.saveInterval == 0 {
+	if m.saveInterval == 0 || m.store.Type() == "database" {
 		m.Save()
 	}
 }
