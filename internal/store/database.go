@@ -3,7 +3,7 @@ package store
 import (
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
-	"github.com/syols/go-devops/internal/model"
+	"github.com/syols/go-devops/internal/models"
 	"io/ioutil"
 	"log"
 	"path/filepath"
@@ -16,7 +16,7 @@ type DatabaseStore struct {
 }
 
 func loadSQL(file string) string {
-	path := filepath.Join("scripts", file)
+	path := filepath.Join("internal", "scripts", file)
 
 	c, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -43,7 +43,7 @@ func NewDatabaseStore(connectionString string) DatabaseStore {
 	}
 }
 
-func (d DatabaseStore) Save(value []model.Payload) error {
+func (d DatabaseStore) Save(value []models.Payload) error {
 	db, err := sqlx.Connect("postgres", d.dataSourceName)
 	if err != nil {
 		return err
@@ -63,8 +63,8 @@ func (d DatabaseStore) Save(value []model.Payload) error {
 	return nil
 }
 
-func (d DatabaseStore) Load() ([]model.Payload, error) {
-	var payload []model.Payload
+func (d DatabaseStore) Load() ([]models.Payload, error) {
+	var payload []models.Payload
 	db, err := sqlx.Connect("postgres", d.dataSourceName)
 	if err != nil {
 		return payload, err

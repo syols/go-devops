@@ -12,7 +12,7 @@ agent:
   client_timeout: 1s
 
 store:
-  database: postgres://postgres:postgres@0.0.0.0:5432/postgres?sslmode=disable
+  database: null
   store_file: "/tmp/devops-metrics-db.json"
   restore: false
-  store_interval: 1s
+  store_interval: 300s

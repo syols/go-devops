@@ -1,11 +1,11 @@
-package internal
+package app
 
 import (
 	"context"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/syols/go-devops/config"
 	"github.com/syols/go-devops/internal/handlers"
-	"github.com/syols/go-devops/internal/settings"
 	"github.com/syols/go-devops/internal/store"
 	"log"
 	"net/http"
@@ -16,23 +16,23 @@ import (
 )
 
 type Server struct {
-	server  http.Server
-	metrics store.MetricsStorage
-	sets    settings.Config
+	server   http.Server
+	metrics  store.MetricsStorage
+	settings config.Config
 }
 
 type Handler func(metrics store.MetricsStorage, key *string, w http.ResponseWriter, r *http.Request)
 
-func NewServer(sets settings.Config) Server {
+func NewServer(settings config.Config) Server {
 	return Server{
-		metrics: store.NewMetricsStorage(sets),
-		sets:    sets,
+		metrics:  store.NewMetricsStorage(settings),
+		settings: settings,
 	}
 }
 
 func (s *Server) handler(handler Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		handler(s.metrics, s.sets.Server.Key, w, r)
+		handler(s.metrics, s.settings.Server.Key, w, r)
 	}
 }
 
@@ -41,6 +41,17 @@ func (s *Server) Run() {
 	signal.Notify(sign, syscall.SIGINT, syscall.SIGTERM)
 	s.shutdown(sign)
 
+	server := http.Server{
+		Addr:    s.settings.Address(),
+		Handler: s.router(),
+	}
+
+	if err := server.ListenAndServe(); err != nil {
+		log.Print(err.Error())
+	}
+}
+
+func (s *Server) router() *chi.Mux {
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
@@ -53,15 +64,7 @@ func (s *Server) Run() {
 	router.Post("/update/", s.handler(handlers.UpdateJSON))
 	router.Post("/updates/", s.handler(handlers.UpdatesJSON))
 	router.Post("/value/", s.handler(handlers.ValueJSON))
-
-	server := http.Server{
-		Addr:    s.sets.GetAddress(),
-		Handler: router,
-	}
-
-	if err := server.ListenAndServe(); err != nil {
-		log.Print(err.Error())
-	}
+	return router
 }
 
 func (s *Server) shutdown(sign chan os.Signal) {

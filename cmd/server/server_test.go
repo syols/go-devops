@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/syols/go-devops/internal"
-	"github.com/syols/go-devops/internal/model"
-	"github.com/syols/go-devops/internal/settings"
+	"github.com/syols/go-devops/config"
+	"github.com/syols/go-devops/internal/app"
+	"github.com/syols/go-devops/internal/models"
 	"io"
 	"log"
 	"net"
@@ -25,7 +25,7 @@ type MockRoute struct { // добавился слайс тестов
 	method   string
 }
 
-func mockSettings(t *testing.T) settings.Config {
+func mockSettings(t *testing.T) config.Config {
 	list, err := net.Listen("tcp", ":0")
 	require.NoError(t, err)
 
@@ -33,24 +33,24 @@ func mockSettings(t *testing.T) settings.Config {
 	err = list.Close()
 	require.NoError(t, err)
 
-	sets := settings.Config{
-		Server: settings.ServerConfig{
-			Address: settings.Address{
+	settings := config.Config{
+		Server: config.ServerConfig{
+			Address: config.Address{
 				Host: "0.0.0.0",
 				Port: uint16(port),
 			},
 		},
-		Agent: settings.AgentConfig{},
-		Store: settings.StoreConfig{
+		Agent: config.AgentConfig{},
+		Store: config.StoreConfig{
 			StoreInterval: time.Second * 10,
 		},
 	}
-	return sets
+	return settings
 }
 
-func mockClientServer(sets settings.Config) http.Client {
+func mockClientServer(settings config.Config) http.Client {
 	log.SetOutput(os.Stdout)
-	server := internal.NewServer(sets)
+	server := app.NewServer(settings)
 	go server.Run()
 	tr := &http.Transport{
 		MaxIdleConns:        10,
@@ -62,14 +62,14 @@ func mockClientServer(sets settings.Config) http.Client {
 }
 
 func TestPlainServer(t *testing.T) {
-	sets := mockSettings(t)
-	client := mockClientServer(sets)
+	settings := mockSettings(t)
+	client := mockClientServer(settings)
 	defer client.CloseIdleConnections()
 
 	//Test update - plain/text
 	uri := url.URL{
 		Scheme: "http",
-		Host:   sets.GetAddress(),
+		Host:   settings.Address(),
 		Path:   "/update/counter/PollCount/1",
 	}
 	checkPlainText(t, MockRoute{
@@ -80,7 +80,7 @@ func TestPlainServer(t *testing.T) {
 	responseString := "1"
 	uri = url.URL{
 		Scheme: "http",
-		Host:   sets.GetAddress(),
+		Host:   settings.Address(),
 		Path:   "/value/counter/PollCount",
 	}
 	checkPlainText(t, MockRoute{
@@ -92,13 +92,13 @@ func TestPlainServer(t *testing.T) {
 
 func TestJsonServer(t *testing.T) {
 	log.SetOutput(os.Stdout)
-	sets := mockSettings(t)
-	client := mockClientServer(sets)
+	settings := mockSettings(t)
+	client := mockClientServer(settings)
 	defer client.CloseIdleConnections()
 
 	uri := url.URL{
 		Scheme: "http",
-		Host:   sets.GetAddress(),
+		Host:   settings.Address(),
 		Path:   "/update/",
 	}
 	payloadString := string(`{"id":"testGauge","type":"gauge","value":100}`)
@@ -110,7 +110,7 @@ func TestJsonServer(t *testing.T) {
 
 	uri = url.URL{
 		Scheme: "http",
-		Host:   sets.GetAddress(),
+		Host:   settings.Address(),
 		Path:   "/value/",
 	}
 	checkApplicationJSON(t, MockRoute{
@@ -146,7 +146,7 @@ func checkApplicationJSON(t *testing.T, test MockRoute, client http.Client) {
 	require.NoError(t, err)
 
 	if test.response != nil {
-		var responsePayload, requestPayload model.Payload
+		var responsePayload, requestPayload models.Payload
 		decoder := json.NewDecoder(response.Body)
 		assert.NoError(t, decoder.Decode(&responsePayload))
 		assert.NoError(t, json.Unmarshal([]byte(*test.response), &requestPayload))

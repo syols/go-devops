@@ -1,7 +1,7 @@
-package model
+package models
 
 import (
-	"errors"
+	"github.com/syols/go-devops/internal/errors"
 	"strconv"
 )
 
@@ -22,14 +22,14 @@ func (c CounterMetric) FromString(value string) (Metric, error) {
 
 func (c CounterMetric) FromPayload(value Payload, key *string) (Metric, error) {
 	if value.CounterValue.TypeName() != value.MetricType {
-		return value.CounterValue, errors.New("wrong type name")
+		return value.CounterValue, errors.NewTypeNameError(value.MetricType)
 	}
 
 	result := CounterMetric(uint64(c) + uint64(*value.CounterValue))
 
 	payload := value.CounterValue.Payload(value.Name, key)
 	if payload.Hash != value.Hash {
-		return result, errors.New("wrong hash sum")
+		return result, errors.NewHashSumError(value.Hash)
 	}
 	return result, nil
 }

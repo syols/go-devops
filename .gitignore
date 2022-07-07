@@ -25,4 +25,4 @@ vendor/
 .vscode
 
 # Settings
-default.yml
+develop.yml

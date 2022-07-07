@@ -3,7 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
-	"github.com/syols/go-devops/internal/model"
+	"github.com/syols/go-devops/internal/models"
 	"github.com/syols/go-devops/internal/store"
 	"net/http"
 )
@@ -13,13 +13,13 @@ func Update(metrics store.MetricsStorage, _ *string, w http.ResponseWriter, r *h
 	metricValue := chi.URLParam(r, "value")
 	metricName := chi.URLParam(r, "name")
 
-	createdMetric, err := model.NewMetric(metricType)
+	createdMetric, err := models.NewMetric(metricType)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotImplemented)
 		return
 	}
 
-	currentMetric, err := metrics.GetMetric(metricName, metricType)
+	currentMetric, err := metrics.Metric(metricName, metricType)
 	if err != nil {
 		currentMetric = createdMetric
 	}
@@ -34,7 +34,7 @@ func Update(metrics store.MetricsStorage, _ *string, w http.ResponseWriter, r *h
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	metrics.SetMetric(metricName, updatedMetric)
+	metrics.UpdateMetric(metricName, updatedMetric)
 }
 
 func UpdateJSON(metrics store.MetricsStorage, key *string, w http.ResponseWriter, r *http.Request) {
@@ -44,19 +44,19 @@ func UpdateJSON(metrics store.MetricsStorage, key *string, w http.ResponseWriter
 	}
 
 	decoder := json.NewDecoder(r.Body)
-	var metricPayload model.Payload
+	var metricPayload models.Payload
 	if err := decoder.Decode(&metricPayload); err != nil {
 		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
 
-	createdMetric, err := model.NewMetric(metricPayload.MetricType)
+	createdMetric, err := models.NewMetric(metricPayload.MetricType)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotImplemented)
 		return
 	}
 
-	currentMetric, err := metrics.GetMetric(metricPayload.Name, metricPayload.MetricType)
+	currentMetric, err := metrics.Metric(metricPayload.Name, metricPayload.MetricType)
 	if err != nil {
 		currentMetric = createdMetric
 	}
@@ -72,7 +72,7 @@ func UpdateJSON(metrics store.MetricsStorage, key *string, w http.ResponseWriter
 		return
 	}
 
-	metrics.SetMetric(metricPayload.Name, payload)
+	metrics.UpdateMetric(metricPayload.Name, payload)
 
 	w.Header().Add("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)
@@ -89,20 +89,20 @@ func UpdatesJSON(metrics store.MetricsStorage, key *string, w http.ResponseWrite
 	}
 
 	decoder := json.NewDecoder(r.Body)
-	var metricPayloads []model.Payload
+	var metricPayloads []models.Payload
 	if err := decoder.Decode(&metricPayloads); err != nil {
 		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
 
 	for _, metricPayload := range metricPayloads {
-		createdMetric, err := model.NewMetric(metricPayload.MetricType)
+		createdMetric, err := models.NewMetric(metricPayload.MetricType)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusNotImplemented)
 			return
 		}
 
-		currentMetric, err := metrics.GetMetric(metricPayload.Name, metricPayload.MetricType)
+		currentMetric, err := metrics.Metric(metricPayload.Name, metricPayload.MetricType)
 		if err != nil {
 			currentMetric = createdMetric
 		}
@@ -118,7 +118,7 @@ func UpdatesJSON(metrics store.MetricsStorage, key *string, w http.ResponseWrite
 			return
 		}
 
-		metrics.SetMetric(metricPayload.Name, payload)
+		metrics.UpdateMetric(metricPayload.Name, payload)
 	}
 
 	w.Header().Add("Content-Type", "application/json")

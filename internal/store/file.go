@@ -2,7 +2,7 @@ package store
 
 import (
 	"encoding/json"
-	"github.com/syols/go-devops/internal/model"
+	"github.com/syols/go-devops/internal/models"
 	"io/ioutil"
 	"log"
 	"os"
@@ -18,7 +18,7 @@ func NewFileStore(storeFile string) FileStore {
 	}
 }
 
-func (f FileStore) Save(value []model.Payload) error {
+func (f FileStore) Save(value []models.Payload) error {
 	jsonBytes, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -47,13 +47,13 @@ func (f FileStore) Save(value []model.Payload) error {
 	return nil
 }
 
-func (f FileStore) Load() ([]model.Payload, error) {
+func (f FileStore) Load() ([]models.Payload, error) {
 	file, err := ioutil.ReadFile(f.storeFile)
 	if err != nil {
 		return nil, err
 	}
 
-	var payload []model.Payload
+	var payload []models.Payload
 	err = json.Unmarshal(file, &payload)
 
 	return payload, err

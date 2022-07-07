@@ -1,4 +1,4 @@
-package model
+package models
 
 type Metric interface {
 	TypeName() string

@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/syols/go-devops/internal"
-	"github.com/syols/go-devops/internal/settings"
+	"github.com/syols/go-devops/config"
+	"github.com/syols/go-devops/internal/app"
 	"log"
 	"os"
 	"testing"
@@ -10,10 +10,10 @@ import (
 
 func TestStartApplication(t *testing.T) {
 	log.SetOutput(os.Stdout)
-	sets := settings.NewConfig()
-	server := internal.NewServer(sets)
-	client := internal.NewHTTPClient(sets)
+	settings := config.NewConfig()
+	server := app.NewServer(settings)
+	client := app.NewHTTPClient(settings)
 	go server.Run()
-	go client.SetMetrics(internal.CollectMetrics())
+	go client.SetMetrics(app.CollectMetrics())
 	go client.SendMetrics()
 }

@@ -3,7 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
-	"github.com/syols/go-devops/internal/model"
+	"github.com/syols/go-devops/internal/models"
 	"github.com/syols/go-devops/internal/store"
 	"log"
 	"net/http"
@@ -13,12 +13,12 @@ func Value(metrics store.MetricsStorage, _ *string, w http.ResponseWriter, r *ht
 	metricType := chi.URLParam(r, "type")
 	metricName := chi.URLParam(r, "name")
 
-	if _, err := model.NewMetric(metricType); err != nil {
+	if _, err := models.NewMetric(metricType); err != nil {
 		http.Error(w, err.Error(), http.StatusNotImplemented)
 		return
 	}
 
-	currentMetric, err := metrics.GetMetric(metricName, metricType)
+	currentMetric, err := metrics.Metric(metricName, metricType)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -36,19 +36,19 @@ func ValueJSON(metrics store.MetricsStorage, key *string, w http.ResponseWriter,
 	}
 
 	decoder := json.NewDecoder(r.Body)
-	var metricPayload model.Payload
+	var metricPayload models.Payload
 	if err := decoder.Decode(&metricPayload); err != nil {
 		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 		return
 	}
 
-	_, err := model.NewMetric(metricPayload.MetricType)
+	_, err := models.NewMetric(metricPayload.MetricType)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotImplemented)
 		return
 	}
 
-	currentMetric, err := metrics.GetMetric(metricPayload.Name, metricPayload.MetricType)
+	currentMetric, err := metrics.Metric(metricPayload.Name, metricPayload.MetricType)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
