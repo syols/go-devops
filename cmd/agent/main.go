@@ -10,9 +10,7 @@ import (
 
 func main() {
 	log.SetOutput(os.Stdout)
-	log.Printf("Agent")
-
-	sets := settings.NewSettings()
+	sets := settings.NewConfig()
 	client := internal.NewHTTPClient(sets)
 	pollTicker := time.NewTicker(sets.Agent.PollInterval)
 	reportTicker := time.NewTicker(sets.Agent.ReportInterval)

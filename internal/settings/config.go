@@ -8,24 +8,24 @@ import (
 	"time"
 )
 
-type Settings struct {
-	Server ServerSettings `yaml:"server"`
-	Agent  AgentSettings  `yaml:"agent"`
-	Store  StoreSettings  `yaml:"store"`
+type Config struct {
+	Server ServerConfig `yaml:"server"`
+	Agent  AgentConfig  `yaml:"agent"`
+	Store  StoreConfig  `yaml:"store"`
 }
 
-type ServerSettings struct {
+type ServerConfig struct {
 	Address Address `yaml:"address"`
 	Key     *string `yaml:"key,omitempty"`
 }
 
-type AgentSettings struct {
+type AgentConfig struct {
 	PollInterval   time.Duration `yaml:"poll_interval"`
 	ReportInterval time.Duration `yaml:"report_interval"`
 	ClientTimeout  time.Duration `yaml:"client_timeout"`
 }
 
-type StoreSettings struct {
+type StoreConfig struct {
 	DatabaseConnectionString *string       `yaml:"database,omitempty"`
 	StoreFile                *string       `yaml:"store_file,omitempty"`
 	Restore                  bool          `yaml:"restore"`
@@ -37,36 +37,34 @@ type Address struct {
 	Port uint16 `yaml:"port"`
 }
 
-func NewSettings() (settings Settings) {
-	log.Print("Settings:")
-	settings.setDefault("configs/default.yml")
+func NewConfig() (settings Config) {
+	settings.setDefault("develop.yaml")
 	settings.setFromOptions(newVariables().getOptions()...)
-	log.Print(settings.String())
 	return settings
 }
 
-func (s *Settings) setFromOptions(options ...Option) {
+func (s *Config) setFromOptions(options ...Option) {
 	for _, fn := range options {
 		fn(s)
 	}
 }
 
-func (s *Settings) setDefault(configPath string) {
+func (s *Config) setDefault(configPath string) {
 	file, err := ioutil.ReadFile(configPath)
 	if err != nil {
-		log.Printf("Read config error")
+		log.Print(err.Error())
 	}
 
 	if err := yaml.Unmarshal(file, s); err != nil {
-		log.Printf("Config load error")
+		log.Print(err.Error())
 	}
 }
 
-func (s *Settings) GetAddress() string {
+func (s *Config) GetAddress() string {
 	return fmt.Sprintf("%s:%d", s.Server.Address.Host, s.Server.Address.Port)
 }
 
-func (s *Settings) String() (result string) {
+func (s *Config) String() (result string) {
 	if marshal, err := yaml.Marshal(s); err != nil {
 		result = string(marshal)
 	}

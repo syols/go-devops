@@ -22,7 +22,7 @@ metrics:
     - Alloc
     - BuckHashSys
 `
-	sets := settings.Settings{}
+	sets := settings.Config{}
 	if err := yaml.Unmarshal([]byte(config), &sets); err != nil {
 		t.Errorf(err.Error())
 	}

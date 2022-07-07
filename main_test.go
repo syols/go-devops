@@ -10,7 +10,7 @@ import (
 
 func TestStartApplication(t *testing.T) {
 	log.SetOutput(os.Stdout)
-	sets := settings.NewSettings()
+	sets := settings.NewConfig()
 	server := internal.NewServer(sets)
 	client := internal.NewHTTPClient(sets)
 	go server.Run()

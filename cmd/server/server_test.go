@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/syols/go-devops/internal"
-	"github.com/syols/go-devops/internal/metric"
+	"github.com/syols/go-devops/internal/model"
 	"github.com/syols/go-devops/internal/settings"
 	"io"
 	"log"
@@ -25,7 +25,7 @@ type MockRoute struct { // добавился слайс тестов
 	method   string
 }
 
-func mockSettings(t *testing.T) settings.Settings {
+func mockSettings(t *testing.T) settings.Config {
 	list, err := net.Listen("tcp", ":0")
 	require.NoError(t, err)
 
@@ -33,22 +33,22 @@ func mockSettings(t *testing.T) settings.Settings {
 	err = list.Close()
 	require.NoError(t, err)
 
-	sets := settings.Settings{
-		Server: settings.ServerSettings{
+	sets := settings.Config{
+		Server: settings.ServerConfig{
 			Address: settings.Address{
 				Host: "0.0.0.0",
 				Port: uint16(port),
 			},
 		},
-		Agent: settings.AgentSettings{},
-		Store: settings.StoreSettings{
+		Agent: settings.AgentConfig{},
+		Store: settings.StoreConfig{
 			StoreInterval: time.Second * 10,
 		},
 	}
 	return sets
 }
 
-func mockClientServer(sets settings.Settings) http.Client {
+func mockClientServer(sets settings.Config) http.Client {
 	log.SetOutput(os.Stdout)
 	server := internal.NewServer(sets)
 	go server.Run()
@@ -146,8 +146,7 @@ func checkApplicationJSON(t *testing.T, test MockRoute, client http.Client) {
 	require.NoError(t, err)
 
 	if test.response != nil {
-		var responsePayload, requestPayload metric.Payload
-		log.Print("check")
+		var responsePayload, requestPayload model.Payload
 		decoder := json.NewDecoder(response.Body)
 		assert.NoError(t, decoder.Decode(&responsePayload))
 		assert.NoError(t, json.Unmarshal([]byte(*test.response), &requestPayload))

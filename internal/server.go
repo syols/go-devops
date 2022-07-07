@@ -1,20 +1,16 @@
 package internal
 
 import (
-	"compress/gzip"
 	"context"
-	"encoding/json"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/syols/go-devops/internal/metric"
+	"github.com/syols/go-devops/internal/handlers"
 	"github.com/syols/go-devops/internal/settings"
 	"github.com/syols/go-devops/internal/store"
-	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 	"time"
 )
@@ -22,22 +18,21 @@ import (
 type Server struct {
 	server  http.Server
 	metrics store.MetricsStorage
-	sets    settings.Settings
+	sets    settings.Config
 }
 
-type gzipWriter struct {
-	http.ResponseWriter
-	Writer io.Writer
-}
+type Handler func(metrics store.MetricsStorage, key *string, w http.ResponseWriter, r *http.Request)
 
-func (w gzipWriter) Write(b []byte) (int, error) {
-	return w.Writer.Write(b)
-}
-
-func NewServer(sets settings.Settings) Server {
+func NewServer(sets settings.Config) Server {
 	return Server{
 		metrics: store.NewMetricsStorage(sets),
 		sets:    sets,
+	}
+}
+
+func (s *Server) handler(handler Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		handler(s.metrics, s.sets.Server.Key, w, r)
 	}
 }
 
@@ -49,239 +44,24 @@ func (s *Server) Run() {
 	router := chi.NewRouter()
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
-	router.Use(compressMiddleware)
+	router.Use(handlers.Compress)
 
-	router.Get("/", s.healthcheckHandler)
-	router.Get("/ping", s.pingHandler)
-	router.Get("/value/{type}/{name}", s.valueMetricHandler)
-	router.Post("/update/{type}/{name}/{value}", s.updateMetricHandler)
-	router.Post("/update/", s.updateJSONMetricHandler)
-	router.Post("/updates/", s.updatesJSONMetricHandler)
-	router.Post("/value/", s.valueJSONMetricHandler)
+	router.Get("/", handlers.Healthcheck)
+	router.Get("/ping", s.handler(handlers.Ping))
+	router.Get("/value/{type}/{name}", s.handler(handlers.Value))
+	router.Post("/update/{type}/{name}/{value}", s.handler(handlers.Update))
+	router.Post("/update/", s.handler(handlers.UpdateJSON))
+	router.Post("/updates/", s.handler(handlers.UpdatesJSON))
+	router.Post("/value/", s.handler(handlers.ValueJSON))
 
 	server := http.Server{
 		Addr:    s.sets.GetAddress(),
 		Handler: router,
 	}
 
-	log.Printf("Server starts at %s", server.Addr)
 	if err := server.ListenAndServe(); err != nil {
-		log.Printf("Listen error: %s", err)
+		log.Print(err.Error())
 	}
-}
-
-func (s *Server) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
-	metricType := chi.URLParam(r, "type")
-	metricValue := chi.URLParam(r, "value")
-	metricName := chi.URLParam(r, "name")
-
-	createdMetric, err := metric.NewMetric(metricType)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotImplemented)
-		return
-	}
-
-	currentMetric, err := s.metrics.GetMetric(metricName, metricType)
-	if err != nil {
-		currentMetric = createdMetric
-	}
-
-	if createdMetric.TypeName() != currentMetric.TypeName() {
-		http.Error(w, "wrong createdMetric type", http.StatusBadRequest)
-		return
-	}
-
-	updatedMetric, err := currentMetric.FromString(metricValue)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	s.metrics.SetMetric(metricName, updatedMetric)
-}
-
-func (s *Server) pingHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "text/html")
-	err := s.metrics.Check()
-	if err != nil {
-		http.Error(w, "store is not available", http.StatusInternalServerError)
-		return
-	}
-}
-
-func (s *Server) healthcheckHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Content-Type", "text/html")
-	if _, err := w.Write([]byte("OK")); err != nil {
-		log.Printf("write error: %s", err)
-	}
-}
-
-func (s *Server) valueMetricHandler(w http.ResponseWriter, r *http.Request) {
-	metricType := chi.URLParam(r, "type")
-	metricName := chi.URLParam(r, "name")
-
-	if _, err := metric.NewMetric(metricType); err != nil {
-		http.Error(w, err.Error(), http.StatusNotImplemented)
-		return
-	}
-
-	currentMetric, err := s.metrics.GetMetric(metricName, metricType)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
-	}
-
-	if _, err := w.Write([]byte(currentMetric.String())); err != nil {
-		log.Printf("write currentMetric error: %s", err)
-	}
-}
-
-func (s *Server) updateJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Header.Get("Content-Type") != "application/json" {
-		http.Error(w, "wrong content type", http.StatusUnsupportedMediaType)
-		return
-	}
-
-	decoder := json.NewDecoder(r.Body)
-	var metricPayload metric.Payload
-	if err := decoder.Decode(&metricPayload); err != nil {
-		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
-		return
-	}
-
-	createdMetric, err := metric.NewMetric(metricPayload.MetricType)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotImplemented)
-		return
-	}
-
-	currentMetric, err := s.metrics.GetMetric(metricPayload.Name, metricPayload.MetricType)
-	if err != nil {
-		currentMetric = createdMetric
-	}
-
-	if createdMetric.TypeName() != currentMetric.TypeName() {
-		http.Error(w, "wrong metric type", http.StatusBadRequest)
-		return
-	}
-
-	payload, err := currentMetric.FromPayload(metricPayload, s.sets.Server.Key)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	s.metrics.SetMetric(metricPayload.Name, payload)
-
-	w.Header().Add("Content-Type", "application/json")
-	encoder := json.NewEncoder(w)
-	if err := encoder.Encode(currentMetric.Payload(metricPayload.Name, s.sets.Server.Key)); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func (s *Server) updatesJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Header.Get("Content-Type") != "application/json" {
-		http.Error(w, "wrong content type", http.StatusUnsupportedMediaType)
-		return
-	}
-
-	decoder := json.NewDecoder(r.Body)
-	var metricPayloads []metric.Payload
-	if err := decoder.Decode(&metricPayloads); err != nil {
-		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
-		return
-	}
-
-	for _, metricPayload := range metricPayloads {
-		createdMetric, err := metric.NewMetric(metricPayload.MetricType)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusNotImplemented)
-			return
-		}
-
-		currentMetric, err := s.metrics.GetMetric(metricPayload.Name, metricPayload.MetricType)
-		if err != nil {
-			currentMetric = createdMetric
-		}
-
-		if createdMetric.TypeName() != currentMetric.TypeName() {
-			http.Error(w, "wrong metric type", http.StatusBadRequest)
-			return
-		}
-
-		payload, err := currentMetric.FromPayload(metricPayload, s.sets.Server.Key)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		s.metrics.SetMetric(metricPayload.Name, payload)
-	}
-
-	w.Header().Add("Content-Type", "application/json")
-	encoder := json.NewEncoder(w)
-	if err := encoder.Encode(metricPayloads[0]); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func (s *Server) valueJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Header.Get("Content-Type") != "application/json" {
-		http.Error(w, "wrong content type", http.StatusUnsupportedMediaType)
-		return
-	}
-
-	decoder := json.NewDecoder(r.Body)
-	var metricPayload metric.Payload
-	if err := decoder.Decode(&metricPayload); err != nil {
-		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
-		return
-	}
-
-	_, err := metric.NewMetric(metricPayload.MetricType)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotImplemented)
-		return
-	}
-
-	currentMetric, err := s.metrics.GetMetric(metricPayload.Name, metricPayload.MetricType)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusNotFound)
-		return
-	}
-
-	w.Header().Add("Content-Type", "application/json")
-	encoder := json.NewEncoder(w)
-	if err := encoder.Encode(currentMetric.Payload(metricPayload.Name, s.sets.Server.Key)); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
-
-func compressMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			next.ServeHTTP(w, r)
-			return
-		}
-
-		gz, err := gzip.NewWriterLevel(w, gzip.DefaultCompression)
-		if err != nil {
-			log.Print(err.Error())
-			return
-		}
-		defer func(gz *gzip.Writer) {
-			err := gz.Close()
-			if err != nil {
-				log.Print(err.Error())
-			}
-		}(gz)
-
-		w.Header().Set("Content-Encoding", "gzip")
-		next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
-	})
 }
 
 func (s *Server) shutdown(sign chan os.Signal) {
@@ -290,9 +70,8 @@ func (s *Server) shutdown(sign chan os.Signal) {
 
 	go func() {
 		<-sign
-		log.Println("Exiting")
-		if err := s.server.Shutdown(ctx); err == nil {
-			log.Println("Server shutdown")
+		if err := s.server.Shutdown(ctx); err != nil {
+			log.Println(err.Error())
 		}
 		s.metrics.Save()
 		os.Exit(0)

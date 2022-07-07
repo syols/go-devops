@@ -2,27 +2,27 @@ package store
 
 import (
 	"errors"
-	"github.com/syols/go-devops/internal/metric"
+	"github.com/syols/go-devops/internal/model"
 	"github.com/syols/go-devops/internal/settings"
 	"log"
 	"time"
 )
 
 type Store interface {
-	Save(value []metric.Payload) error
-	Load() ([]metric.Payload, error)
+	Save(value []model.Payload) error
+	Load() ([]model.Payload, error)
 	Type() string
 	Check() error
 }
 
 type MetricsStorage struct {
-	metrics      map[string]metric.Metric
+	metrics      map[string]model.Metric
 	store        Store
 	saveInterval time.Duration
 	key          *string
 }
 
-func NewStore(sets settings.Settings) Store {
+func NewStore(sets settings.Config) Store {
 	if sets.Store.DatabaseConnectionString != nil {
 		return NewDatabaseStore(*sets.Store.DatabaseConnectionString)
 	}
@@ -32,9 +32,9 @@ func NewStore(sets settings.Settings) Store {
 	return NewFileStore("tmp.json")
 }
 
-func NewMetricsStorage(sets settings.Settings) MetricsStorage {
+func NewMetricsStorage(sets settings.Config) MetricsStorage {
 	metrics := MetricsStorage{
-		metrics:      map[string]metric.Metric{},
+		metrics:      map[string]model.Metric{},
 		store:        NewStore(sets),
 		saveInterval: sets.Store.StoreInterval,
 		key:          sets.Server.Key,
@@ -56,14 +56,14 @@ func NewMetricsStorage(sets settings.Settings) MetricsStorage {
 	return metrics
 }
 
-func (m MetricsStorage) SetMetric(metricName string, value metric.Metric) {
+func (m MetricsStorage) SetMetric(metricName string, value model.Metric) {
 	m.metrics[metricName] = value
 	if m.saveInterval == 0 || m.store.Type() == "database" {
 		m.Save()
 	}
 }
 
-func (m MetricsStorage) GetMetric(metricName, metricType string) (metric.Metric, error) {
+func (m MetricsStorage) GetMetric(metricName, metricType string) (model.Metric, error) {
 	value, isOk := m.metrics[metricName]
 	if !isOk {
 		return nil, errors.New("value not found, wrong metric name")
@@ -83,7 +83,7 @@ func (m MetricsStorage) LoadMetrics() {
 	}
 
 	for _, payload := range metricsPayload {
-		value, err := metric.NewMetric(payload.MetricType)
+		value, err := model.NewMetric(payload.MetricType)
 		if err != nil {
 			log.Print(err.Error())
 		}
@@ -95,12 +95,15 @@ func (m MetricsStorage) LoadMetrics() {
 }
 
 func (m MetricsStorage) Save() {
-	var payload []metric.Payload
+	var payload []model.Payload
 	for k, v := range m.metrics {
 		payload = append(payload, v.Payload(k, m.key))
 	}
-	if err := m.store.Save(payload); err != nil {
-		log.Print(err.Error())
+
+	if len(payload) > 0 {
+		if err := m.store.Save(payload); err != nil {
+			log.Print(err.Error())
+		}
 	}
 }
 

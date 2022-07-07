@@ -12,7 +12,7 @@ import (
 	"testing"
 )
 
-func mockSettings(t *testing.T) settings.Settings {
+func mockSettings(t *testing.T) settings.Config {
 	list, err := net.Listen("tcp", ":0")
 	require.NoError(t, err)
 
@@ -20,14 +20,14 @@ func mockSettings(t *testing.T) settings.Settings {
 	err = list.Close()
 	require.NoError(t, err)
 
-	sets := settings.Settings{
-		Server: settings.ServerSettings{
+	sets := settings.Config{
+		Server: settings.ServerConfig{
 			Address: settings.Address{
 				Host: "0.0.0.0",
 				Port: uint16(port),
 			},
 		},
-		Agent: settings.AgentSettings{},
+		Agent: settings.AgentConfig{},
 	}
 	return sets
 }
