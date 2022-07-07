@@ -52,9 +52,11 @@ func (s *Server) Run() {
 	router.Use(compressMiddleware)
 
 	router.Get("/", s.healthcheckHandler)
+	router.Get("/ping", s.pingHandler)
 	router.Get("/value/{type}/{name}", s.valueMetricHandler)
 	router.Post("/update/{type}/{name}/{value}", s.updateMetricHandler)
 	router.Post("/update/", s.updateJSONMetricHandler)
+	router.Post("/updates/", s.updatesJSONMetricHandler)
 	router.Post("/value/", s.valueJSONMetricHandler)
 
 	server := http.Server{
@@ -95,6 +97,15 @@ func (s *Server) updateMetricHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.metrics.SetMetric(metricName, updatedMetric)
+}
+
+func (s *Server) pingHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Content-Type", "text/html")
+	err := s.metrics.Check()
+	if err != nil {
+		http.Error(w, "store is not available", http.StatusInternalServerError)
+		return
+	}
 }
 
 func (s *Server) healthcheckHandler(w http.ResponseWriter, r *http.Request) {
@@ -152,11 +163,65 @@ func (s *Server) updateJSONMetricHandler(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "wrong metric type", http.StatusBadRequest)
 		return
 	}
-	s.metrics.SetMetric(metricPayload.Name, currentMetric.FromPayload(metricPayload))
+
+	payload, err := currentMetric.FromPayload(metricPayload, s.sets.Server.Key)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	s.metrics.SetMetric(metricPayload.Name, payload)
 
 	w.Header().Add("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)
-	if err := encoder.Encode(currentMetric.Payload(metricPayload.Name)); err != nil {
+	if err := encoder.Encode(currentMetric.Payload(metricPayload.Name, s.sets.Server.Key)); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func (s *Server) updatesJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Header.Get("Content-Type") != "application/json" {
+		http.Error(w, "wrong content type", http.StatusUnsupportedMediaType)
+		return
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	var metricPayloads []metric.Payload
+	if err := decoder.Decode(&metricPayloads); err != nil {
+		http.Error(w, err.Error(), http.StatusUnprocessableEntity)
+		return
+	}
+
+	for _, metricPayload := range metricPayloads {
+		createdMetric, err := metric.NewMetric(metricPayload.MetricType)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusNotImplemented)
+			return
+		}
+
+		currentMetric, err := s.metrics.GetMetric(metricPayload.Name, metricPayload.MetricType)
+		if err != nil {
+			currentMetric = createdMetric
+		}
+
+		if createdMetric.TypeName() != currentMetric.TypeName() {
+			http.Error(w, "wrong metric type", http.StatusBadRequest)
+			return
+		}
+
+		payload, err := currentMetric.FromPayload(metricPayload, s.sets.Server.Key)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		s.metrics.SetMetric(metricPayload.Name, payload)
+	}
+
+	w.Header().Add("Content-Type", "application/json")
+	encoder := json.NewEncoder(w)
+	if err := encoder.Encode(metricPayloads[0]); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -189,7 +254,7 @@ func (s *Server) valueJSONMetricHandler(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Add("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)
-	if err := encoder.Encode(currentMetric.Payload(metricPayload.Name)); err != nil {
+	if err := encoder.Encode(currentMetric.Payload(metricPayload.Name, s.sets.Server.Key)); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -202,7 +267,7 @@ func compressMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		gz, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
+		gz, err := gzip.NewWriterLevel(w, gzip.DefaultCompression)
 		if err != nil {
 			log.Print(err.Error())
 			return

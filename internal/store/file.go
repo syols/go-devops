@@ -20,6 +20,10 @@ func NewFileStore(storeFile string) FileStore {
 }
 
 func (f FileStore) Save(value []metric.Payload) error {
+	if len(value) == 0 {
+		return nil
+	}
+
 	jsonBytes, err := json.Marshal(value)
 	if err != nil {
 		return err
@@ -58,4 +62,13 @@ func (f FileStore) Load() ([]metric.Payload, error) {
 	var payload []metric.Payload
 	err = json.Unmarshal([]byte(file), &payload)
 	return payload, err
+}
+
+func (f FileStore) Check() error {
+	_, err := os.Stat(f.storeFile)
+	return err
+}
+
+func (f FileStore) Type() string {
+	return "file"
 }
