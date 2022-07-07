@@ -58,7 +58,6 @@ func (d DatabaseStore) Save(value []metric.Payload) error {
 	if _, err = db.NamedExec(insert, value); err != nil {
 		return err
 	}
-	log.Printf("Save metrics to %s: %v", d.connectionString, value)
 	return nil
 }
 

@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
-	"log"
 )
 
 type Metric interface {
@@ -64,7 +63,6 @@ func NewPayload(name string, key *string, value Metric) Payload {
 		hashString := payload.String()
 		h.Write([]byte(hashString))
 		payload.Hash = fmt.Sprintf("%x", h.Sum(nil))
-		log.Printf("Hash from %s = %s", hashString, payload.Hash)
 	}
 
 	return payload
