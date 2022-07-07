@@ -193,6 +193,10 @@ func (s *Server) updatesJSONMetricHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	if v, err := json.Marshal(metricPayloads); err == nil {
+		log.Printf("-->", string(v))
+	}
+
 	for _, metricPayload := range metricPayloads {
 		createdMetric, err := metric.NewMetric(metricPayload.MetricType)
 		if err != nil {
