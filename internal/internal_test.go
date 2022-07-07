@@ -1,13 +1,13 @@
 package internal
 
 import (
-	"github.com/syols/go-devops/internal/settings"
+	"github.com/syols/go-devops/config"
 	"gopkg.in/yaml.v2"
 	"testing"
 )
 
 func TestSettings(t *testing.T) {
-	var config = `
+	var configData = `
 address:
   host: 0.0.0.0
   port: 8080
@@ -22,8 +22,8 @@ metrics:
     - Alloc
     - BuckHashSys
 `
-	sets := settings.Settings{}
-	if err := yaml.Unmarshal([]byte(config), &sets); err != nil {
+	settings := config.Config{}
+	if err := yaml.Unmarshal([]byte(configData), &settings); err != nil {
 		t.Errorf(err.Error())
 	}
 }

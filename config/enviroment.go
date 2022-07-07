@@ -1,4 +1,4 @@
-package settings
+package config
 
 import (
 	"flag"
@@ -36,7 +36,7 @@ func newVariables() EnvironmentVariables {
 	}
 }
 
-func (e EnvironmentVariables) getOptions() (options []Option) {
+func (e EnvironmentVariables) Options() (options []Option) {
 	flag.Parse()
 	for k, v := range e {
 		variable, isOk := os.LookupEnv(k.env)

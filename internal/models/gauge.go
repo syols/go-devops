@@ -1,8 +1,8 @@
-package metric
+package models
 
 import (
-	"errors"
 	"fmt"
+	"github.com/syols/go-devops/internal/errors"
 	"strconv"
 )
 
@@ -23,12 +23,12 @@ func (g GaugeMetric) FromString(value string) (Metric, error) {
 
 func (g GaugeMetric) FromPayload(value Payload, key *string) (Metric, error) {
 	if value.GaugeValue.TypeName() != value.MetricType {
-		return value.GaugeValue, errors.New("wrong type name")
+		return value.GaugeValue, errors.NewTypeNameError(value.MetricType)
 	}
 
 	payload := value.GaugeValue.Payload(value.Name, key)
 	if payload.Hash != value.Hash {
-		return value.GaugeValue, errors.New("wrong hash sum")
+		return value.GaugeValue, errors.NewHashSumError(value.MetricType)
 	}
 	return value.GaugeValue, nil
 }

@@ -1,21 +1,11 @@
-package metric
+package models
 
 import (
 	"crypto/hmac"
 	"crypto/sha256"
-	"errors"
 	"fmt"
+	"github.com/syols/go-devops/internal/errors"
 )
-
-type Metric interface {
-	TypeName() string
-
-	String() string
-	Payload(name string, key *string) Payload
-
-	FromString(value string) (Metric, error)
-	FromPayload(value Payload, key *string) (Metric, error)
-}
 
 type Payload struct {
 	Name         string         `json:"id" db:"id"`
@@ -74,5 +64,5 @@ func NewMetric(typeName string) (Metric, error) {
 			return v, nil
 		}
 	}
-	return nil, errors.New("wrong metric type")
+	return nil, errors.NewTypeNameError(typeName)
 }
