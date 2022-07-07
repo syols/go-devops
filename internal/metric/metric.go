@@ -19,11 +19,11 @@ type Metric interface {
 }
 
 type Payload struct {
-	Name         string         `json:"id"`
-	MetricType   string         `json:"type"`
-	CounterValue *CounterMetric `json:"delta,omitempty"`
-	GaugeValue   *GaugeMetric   `json:"value,omitempty"`
-	Hash         string         `json:"hash,omitempty"`
+	Name         string         `json:"id" db:"id"`
+	MetricType   string         `json:"type" db:"metric_type"`
+	CounterValue *CounterMetric `json:"delta,omitempty" db:"counter_value"`
+	GaugeValue   *GaugeMetric   `json:"value,omitempty" db:"gauge_value"`
+	Hash         string         `json:"hash,omitempty" db:"hash"`
 }
 
 func (p *Payload) Metric() (metric Metric) {
