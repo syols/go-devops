@@ -88,6 +88,9 @@ func (m MetricsStorage) LoadMetrics() {
 			log.Print(err.Error())
 		}
 		m.metrics[payload.Name], err = value.FromPayload(payload, m.key)
+		if err != nil {
+			log.Print(err.Error())
+		}
 	}
 }
 

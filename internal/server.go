@@ -193,10 +193,6 @@ func (s *Server) updatesJSONMetricHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	if v, err := json.Marshal(metricPayloads); err == nil {
-		log.Printf(string(v))
-	}
-
 	for _, metricPayload := range metricPayloads {
 		createdMetric, err := metric.NewMetric(metricPayload.MetricType)
 		if err != nil {
@@ -229,18 +225,6 @@ func (s *Server) updatesJSONMetricHandler(w http.ResponseWriter, r *http.Request
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	//body, err := json.Marshal(metricPayloads)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusBadRequest)
-	//	return
-	//}
-	//log.Printf(string(body))
-	//_, err = w.Write(body)
-	//if err != nil {
-	//	http.Error(w, err.Error(), http.StatusBadRequest)
-	//	return
-	//}
-
 }
 
 func (s *Server) valueJSONMetricHandler(w http.ResponseWriter, r *http.Request) {
@@ -261,9 +245,6 @@ func (s *Server) valueJSONMetricHandler(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, err.Error(), http.StatusNotImplemented)
 		return
 	}
-
-	val, _ := json.Marshal(metricPayload)
-	log.Printf(string(val))
 
 	currentMetric, err := s.metrics.GetMetric(metricPayload.Name, metricPayload.MetricType)
 	if err != nil {

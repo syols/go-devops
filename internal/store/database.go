@@ -50,7 +50,12 @@ func (d DatabaseStore) Save(value []metric.Payload) error {
 	}
 
 	db, err := sqlx.Connect("postgres", d.connectionString)
-	defer db.Close()
+	defer func(db *sqlx.DB) {
+		err := db.Close()
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
+	}(db)
 	if err != nil {
 		return err
 	}
@@ -64,7 +69,12 @@ func (d DatabaseStore) Save(value []metric.Payload) error {
 func (d DatabaseStore) Load() ([]metric.Payload, error) {
 	var payload []metric.Payload
 	db, err := sqlx.Connect("postgres", d.connectionString)
-	defer db.Close()
+	defer func(db *sqlx.DB) {
+		err := db.Close()
+		if err != nil {
+			log.Fatalf(err.Error())
+		}
+	}(db)
 	if err != nil {
 		return payload, err
 	}
