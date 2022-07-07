@@ -194,7 +194,7 @@ func (s *Server) updatesJSONMetricHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	if v, err := json.Marshal(metricPayloads); err == nil {
-		log.Printf("-->", string(v))
+		log.Printf(string(v))
 	}
 
 	for _, metricPayload := range metricPayloads {
@@ -224,17 +224,22 @@ func (s *Server) updatesJSONMetricHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	w.Header().Add("Content-Type", "application/json")
-	body, err := json.Marshal(metricPayloads)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	encoder := json.NewEncoder(w)
+	if err := encoder.Encode(metricPayloads); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	log.Printf(string(body))
-	_, err = w.Write(body)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+	//body, err := json.Marshal(metricPayloads)
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusBadRequest)
+	//	return
+	//}
+	//log.Printf(string(body))
+	//_, err = w.Write(body)
+	//if err != nil {
+	//	http.Error(w, err.Error(), http.StatusBadRequest)
+	//	return
+	//}
 
 }
 
