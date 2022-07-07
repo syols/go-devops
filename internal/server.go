@@ -225,7 +225,7 @@ func (s *Server) updatesJSONMetricHandler(w http.ResponseWriter, r *http.Request
 
 	w.Header().Add("Content-Type", "application/json")
 	encoder := json.NewEncoder(w)
-	if err := encoder.Encode(metricPayloads); err != nil {
+	if err := encoder.Encode(metricPayloads[0]); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -286,7 +286,7 @@ func compressMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		gz, err := gzip.NewWriterLevel(w, gzip.BestSpeed)
+		gz, err := gzip.NewWriterLevel(w, gzip.DefaultCompression)
 		if err != nil {
 			log.Print(err.Error())
 			return
