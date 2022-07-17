@@ -27,7 +27,6 @@ func mockSettings(t *testing.T) config.Config {
 				Port: uint16(port),
 			},
 		},
-		Agent: config.AgentConfig{},
 	}
 	return settings
 }
@@ -62,6 +61,8 @@ func TestAgent(t *testing.T) {
 	client := app.NewHTTPClient(settings)
 	metrics := app.CollectMetrics()
 	client.SetMetrics(metrics)
-	client.SendMetrics()
+	err = client.SendMetrics()
+	assert.NoError(t, err)
+
 	client.Client.CloseIdleConnections()
 }

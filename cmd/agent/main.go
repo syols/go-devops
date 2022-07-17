@@ -20,7 +20,12 @@ func main() {
 		case <-pollTicker.C:
 			go client.SetMetrics(app.CollectMetrics())
 		case <-reportTicker.C:
-			go client.SendMetrics()
+			go func() {
+				err := client.SendMetrics()
+				if err != nil {
+					log.Fatal(err)
+				}
+			}()
 		}
 	}
 }

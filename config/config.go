@@ -2,9 +2,8 @@ package config
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 	"io/ioutil"
-	"log"
 	"net"
 	"strconv"
 	"time"
@@ -42,7 +41,10 @@ type Address struct {
 }
 
 func NewConfig() (settings Config) {
-	settings.setDefault("develop.yml")
+	err := settings.setDefault("develop.yml")
+	if err != nil {
+		return Config{}
+	}
 	settings.setFromOptions(newVariables().Options()...)
 	return settings
 }
@@ -53,15 +55,16 @@ func (s *Config) setFromOptions(options ...Option) {
 	}
 }
 
-func (s *Config) setDefault(configPath string) {
+func (s *Config) setDefault(configPath string) error {
 	file, err := ioutil.ReadFile(configPath)
 	if err != nil {
-		log.Print(err.Error())
+		return err
 	}
 
 	if err := yaml.Unmarshal(file, s); err != nil {
-		log.Print(err.Error())
+		return err
 	}
+	return nil
 }
 
 func (s *Config) Address() string {
@@ -75,7 +78,7 @@ func (s *Config) String() (result string) {
 	return
 }
 
-func WithAddress(address string) Option {
+func withAddress(address string) Option {
 	return func(s *Config) {
 		if host, port, err := net.SplitHostPort(address); err == nil {
 			if port, err := strconv.ParseUint(port, 0, 16); err == nil {
@@ -86,69 +89,61 @@ func WithAddress(address string) Option {
 	}
 }
 
-func WithRestore(value string) Option {
-	return func(s *Config) {
-		val, err := strconv.ParseBool(value)
-		if err != nil {
-			log.Print(err.Error())
-		}
-		s.Store.Restore = val
-	}
-}
-
-func WithStoreFile(value string) Option {
+func withStoreFile(value string) Option {
 	return func(s *Config) {
 		s.Store.StoreFile = &value
 	}
 }
 
-func WithPollInterval(value string) Option {
+func withRestore(value string) Option {
 	return func(s *Config) {
-		val, err := time.ParseDuration(value)
-		if err != nil {
-			log.Print(err.Error())
+		if val, err := strconv.ParseBool(value); err == nil {
+			s.Store.Restore = val
 		}
-		s.Agent.PollInterval = val
 	}
 }
 
-func WithReportInterval(value string) Option {
+func withPollInterval(value string) Option {
 	return func(s *Config) {
-		val, err := time.ParseDuration(value)
-		if err != nil {
-			log.Print(err.Error())
+		if val, err := time.ParseDuration(value); err == nil {
+			s.Agent.PollInterval = val
 		}
-		s.Agent.ReportInterval = val
 	}
 }
 
-func WithClientTimeout(value string) Option {
+func withReportInterval(value string) Option {
 	return func(s *Config) {
-		val, err := time.ParseDuration(value)
-		if err != nil {
-			log.Print(err.Error())
+		if val, err := time.ParseDuration(value); err == nil {
+			s.Agent.ReportInterval = val
 		}
-		s.Agent.ClientTimeout = val
 	}
 }
 
-func WithStoreInterval(value string) Option {
+func withClientTimeout(value string) Option {
 	return func(s *Config) {
-		val, err := time.ParseDuration(value)
-		if err != nil {
-			log.Print(err.Error())
+		if val, err := time.ParseDuration(value); err == nil {
+			s.Agent.ClientTimeout = val
 		}
-		s.Store.StoreInterval = val
+
 	}
 }
 
-func WithKey(value string) Option {
+func withStoreInterval(value string) Option {
+	return func(s *Config) {
+		if val, err := time.ParseDuration(value); err == nil {
+			s.Store.StoreInterval = val
+		}
+
+	}
+}
+
+func withKey(value string) Option {
 	return func(s *Config) {
 		s.Server.Key = &value
 	}
 }
 
-func WithDatabase(value string) Option {
+func withDatabase(value string) Option {
 	return func(s *Config) {
 		s.Store.DatabaseConnectionString = &value
 	}

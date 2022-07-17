@@ -1,112 +1,91 @@
 package store
 
 import (
+	"context"
 	"github.com/syols/go-devops/config"
-	"github.com/syols/go-devops/internal/errors"
 	"github.com/syols/go-devops/internal/models"
 	"log"
 	"time"
 )
 
 type Store interface {
-	Save(value []models.Payload) error
-	Load() ([]models.Payload, error)
+	Save(ctx context.Context, value []models.Metric) error
+	Load(ctx context.Context) ([]models.Metric, error)
 	Type() string
 	Check() error
 }
 
+type Metrics map[string]models.Metric
 type MetricsStorage struct {
-	metrics      map[string]models.Metric
-	store        Store
-	saveInterval time.Duration
-	key          *string
+	Metrics
+	Store
+
+	SaveInterval time.Duration
+	Key          *string
 }
 
-func NewStore(settings config.Config) Store {
+func NewStore(settings config.Config) (Store, error) {
 	if settings.Store.DatabaseConnectionString != nil {
 		return NewDatabaseStore(*settings.Store.DatabaseConnectionString)
 	}
+
 	if settings.Store.StoreFile != nil {
-		return NewFileStore(*settings.Store.StoreFile)
+		return NewFileStore(*settings.Store.StoreFile), nil
 	}
-	return NewFileStore("tmp.json")
+
+	return NewFileStore("tmp.json"), nil
 }
 
-func NewMetricsStorage(settings config.Config) MetricsStorage {
+func NewMetricsStorage(settings config.Config) (MetricsStorage, error) {
+	store, err := NewStore(settings)
+	if err != nil {
+		return MetricsStorage{}, err
+	}
+
 	metrics := MetricsStorage{
-		metrics:      map[string]models.Metric{},
-		store:        NewStore(settings),
-		saveInterval: settings.Store.StoreInterval,
-		key:          settings.Server.Key,
+		Metrics:      make(Metrics),
+		Store:        store,
+		SaveInterval: settings.Store.StoreInterval,
+		Key:          settings.Server.Key,
 	}
 
 	if settings.Store.Restore {
-		metrics.Load()
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		metrics.Load(ctx)
+		defer cancel()
 	}
 
 	if settings.Store.StoreInterval > 0 {
-		ticker := time.NewTicker(metrics.saveInterval)
+		ticker := time.NewTicker(metrics.SaveInterval)
 		go func() {
 			for {
 				<-ticker.C
-				metrics.Save()
+				if err := metrics.Save(context.Background()); err != nil {
+					log.Fatal(err)
+				}
 			}
 		}()
 	}
-	return metrics
+	return metrics, nil
 }
 
-func (m MetricsStorage) UpdateMetric(metricName string, value models.Metric) {
-	m.metrics[metricName] = value
-	if m.saveInterval == 0 || m.store.Type() == "database" {
-		m.Save()
-	}
-}
-
-func (m MetricsStorage) Metric(metricName, metricType string) (models.Metric, error) {
-	value, isOk := m.metrics[metricName]
-	if !isOk {
-		return nil, errors.NewValueNotFound(metricName)
-	}
-
-	if metricType != value.TypeName() {
-		return nil, errors.NewValueNotFound(metricType)
-	}
-	return value, nil
-}
-
-func (m MetricsStorage) Load() {
-	metricsPayload, err := m.store.Load()
-	if err != nil {
-		log.Print(err.Error())
-		return
-	}
-
-	for _, payload := range metricsPayload {
-		value, err := models.NewMetric(payload.MetricType)
-		if err != nil {
-			log.Print(err.Error())
-		}
-		m.metrics[payload.Name], err = value.FromPayload(payload, m.key)
-		if err != nil {
-			log.Print(err.Error())
+func (m MetricsStorage) Load(ctx context.Context) {
+	if metricsPayload, err := m.Store.Load(ctx); err == nil {
+		for _, payload := range metricsPayload {
+			m.Metrics[payload.Name] = payload
 		}
 	}
 }
 
-func (m MetricsStorage) Save() {
-	var payload []models.Payload
-	for k, v := range m.metrics {
-		payload = append(payload, v.Payload(k, m.key))
+func (m MetricsStorage) Save(ctx context.Context) error {
+	result := make([]models.Metric, len(m.Metrics))
+	for _, v := range m.Metrics {
+		result = append(result, v)
 	}
 
-	if len(payload) > 0 {
-		if err := m.store.Save(payload); err != nil {
-			log.Print(err.Error())
-		}
-	}
+	return m.Store.Save(ctx, result)
 }
 
 func (m MetricsStorage) Check() error {
-	return m.store.Check()
+	return m.Store.Check()
 }

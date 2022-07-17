@@ -26,18 +26,18 @@ func Compress(next http.Handler) http.Handler {
 
 		gz, err := gzip.NewWriterLevel(w, gzip.DefaultCompression)
 		if err != nil {
-			log.Print(err.Error())
-			return
+			log.Fatal(err)
 		}
 
 		defer func(gz *gzip.Writer) {
 			err := gz.Close()
 			if err != nil {
-				log.Print(err.Error())
+				log.Fatal(err)
 			}
 		}(gz)
 
 		w.Header().Set("Content-Encoding", "gzip")
+		w.Header().Add("Content-Type", "application/json")
 		next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
 	})
 }

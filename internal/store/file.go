@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/syols/go-devops/internal/models"
 	"io/ioutil"
@@ -18,14 +19,14 @@ func NewFileStore(storeFile string) FileStore {
 	}
 }
 
-func (f FileStore) Save(value []models.Payload) error {
+func (f FileStore) Save(ctx context.Context, value []models.Metric) error {
 	jsonBytes, err := json.Marshal(value)
 	if err != nil {
 		return err
 	}
 
 	if err := os.Remove(f.storeFile); err != nil {
-		log.Print(err.Error())
+		return err
 	}
 
 	file, err := os.Create(f.storeFile)
@@ -40,20 +41,20 @@ func (f FileStore) Save(value []models.Payload) error {
 	defer func(file *os.File) {
 		err := file.Close()
 		if err != nil {
-			log.Print(err.Error())
+			log.Fatal(err)
 		}
 	}(file)
 
 	return nil
 }
 
-func (f FileStore) Load() ([]models.Payload, error) {
+func (f FileStore) Load(_ context.Context) ([]models.Metric, error) {
 	file, err := ioutil.ReadFile(f.storeFile)
 	if err != nil {
 		return nil, err
 	}
 
-	var payload []models.Payload
+	var payload []models.Metric
 	err = json.Unmarshal(file, &payload)
 
 	return payload, err

@@ -23,17 +23,15 @@ type Server struct {
 
 type Handler func(metrics store.MetricsStorage, key *string, w http.ResponseWriter, r *http.Request)
 
-func NewServer(settings config.Config) Server {
+func NewServer(settings config.Config) (Server, error) {
+	metrics, err := store.NewMetricsStorage(settings)
+	if err != nil {
+		return Server{}, err
+	}
 	return Server{
-		metrics:  store.NewMetricsStorage(settings),
+		metrics:  metrics,
 		settings: settings,
-	}
-}
-
-func (s *Server) handler(handler Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		handler(s.metrics, s.settings.Server.Key, w, r)
-	}
+	}, nil
 }
 
 func (s *Server) Run() {
@@ -47,7 +45,7 @@ func (s *Server) Run() {
 	}
 
 	if err := server.ListenAndServe(); err != nil {
-		log.Print(err.Error())
+		log.Fatal(err)
 	}
 }
 
@@ -58,12 +56,12 @@ func (s *Server) router() *chi.Mux {
 	router.Use(handlers.Compress)
 
 	router.Get("/", handlers.Healthcheck)
-	router.Get("/ping", s.handler(handlers.Ping))
-	router.Get("/value/{type}/{name}", s.handler(handlers.Value))
-	router.Post("/update/{type}/{name}/{value}", s.handler(handlers.Update))
-	router.Post("/update/", s.handler(handlers.UpdateJSON))
-	router.Post("/updates/", s.handler(handlers.UpdatesJSON))
-	router.Post("/value/", s.handler(handlers.ValueJSON))
+	router.Get("/ping", handlers.Ping(s.metrics))
+	router.Get("/value/{type}/{name}", handlers.Value(s.metrics))
+	router.Post("/update/{type}/{name}/{value}", handlers.Update(s.metrics))
+	router.Post("/update/", handlers.UpdateJSON(s.metrics, s.settings.Server.Key))
+	router.Post("/updates/", handlers.UpdatesJSON(s.metrics, s.settings.Server.Key))
+	router.Post("/value/", handlers.ValueJSON(s.metrics))
 	return router
 }
 
@@ -74,9 +72,12 @@ func (s *Server) shutdown(sign chan os.Signal) {
 	go func() {
 		<-sign
 		if err := s.server.Shutdown(ctx); err != nil {
-			log.Println(err.Error())
+			log.Fatal(err)
 		}
-		s.metrics.Save()
+		err := s.metrics.Save(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
 		os.Exit(0)
 	}()
 }

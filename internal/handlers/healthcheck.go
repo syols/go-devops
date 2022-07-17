@@ -2,22 +2,19 @@ package handlers
 
 import (
 	"github.com/syols/go-devops/internal/store"
-	"log"
 	"net/http"
 )
 
 func Healthcheck(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Add("Content-Type", "text/html")
 	if _, err := w.Write([]byte("OK")); err != nil {
-		log.Print(err.Error())
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
 
-func Ping(metrics store.MetricsStorage, _ *string, w http.ResponseWriter, _ *http.Request) {
-	w.Header().Add("Content-Type", "text/html")
-
-	err := metrics.Check()
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+func Ping(metrics store.MetricsStorage) http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		if err := metrics.Check(); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 	}
 }

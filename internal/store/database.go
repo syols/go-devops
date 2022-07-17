@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"github.com/syols/go-devops/internal/models"
@@ -20,31 +21,31 @@ func loadSQL(file string) string {
 
 	c, err := ioutil.ReadFile(path)
 	if err != nil {
-		log.Fatalf(err.Error())
+		log.Fatal(err)
 	}
 
 	return string(c)
 }
 
-func NewDatabaseStore(connectionString string) DatabaseStore {
+func NewDatabaseStore(connectionString string) (DatabaseStore, error) {
 	db, err := sqlx.Connect("postgres", connectionString)
 	if err != nil {
-		log.Fatalf(err.Error())
+		return DatabaseStore{}, err
 	}
 
 	if _, err := db.Exec(loadSQL("create.sql")); err != nil {
-		log.Print(err.Error())
+		return DatabaseStore{}, err
 	}
 
 	return DatabaseStore{
 		dataSourceName: connectionString,
 		selectQuery:    loadSQL("select.sql"),
 		insertQuery:    loadSQL("insert.sql"),
-	}
+	}, nil
 }
 
-func (d DatabaseStore) Save(value []models.Payload) error {
-	db, err := sqlx.Connect("postgres", d.dataSourceName)
+func (d DatabaseStore) Save(ctx context.Context, value []models.Metric) error {
+	db, err := sqlx.ConnectContext(ctx, "postgres", d.dataSourceName)
 	if err != nil {
 		return err
 	}
@@ -52,7 +53,7 @@ func (d DatabaseStore) Save(value []models.Payload) error {
 	defer func(db *sqlx.DB) {
 		err := db.Close()
 		if err != nil {
-			log.Fatalf(err.Error())
+			log.Fatal(err)
 		}
 	}(db)
 
@@ -63,16 +64,16 @@ func (d DatabaseStore) Save(value []models.Payload) error {
 	return nil
 }
 
-func (d DatabaseStore) Load() ([]models.Payload, error) {
-	var payload []models.Payload
-	db, err := sqlx.Connect("postgres", d.dataSourceName)
+func (d DatabaseStore) Load(ctx context.Context) ([]models.Metric, error) {
+	var payload []models.Metric
+	db, err := sqlx.ConnectContext(ctx, "postgres", d.dataSourceName)
 	if err != nil {
 		return payload, err
 	}
 
 	defer func(db *sqlx.DB) {
 		if err := db.Close(); err != nil {
-			log.Fatalf(err.Error())
+			log.Fatal(err)
 		}
 	}(db)
 
@@ -86,7 +87,12 @@ func (d DatabaseStore) Load() ([]models.Payload, error) {
 func (d DatabaseStore) Check() error {
 	db, err := sqlx.Connect("postgres", d.dataSourceName)
 	if err == nil {
-		defer db.Close()
+		defer func(db *sqlx.DB) {
+			err := db.Close()
+			if err != nil {
+				log.Fatal(err)
+			}
+		}(db)
 	}
 
 	return err

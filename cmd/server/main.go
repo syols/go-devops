@@ -9,6 +9,7 @@ import (
 
 func main() {
 	log.SetOutput(os.Stdout)
-	server := app.NewServer(config.NewConfig())
-	server.Run()
+	if server, err := app.NewServer(config.NewConfig()); err == nil {
+		server.Run()
+	}
 }

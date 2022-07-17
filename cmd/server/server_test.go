@@ -3,155 +3,194 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 	"github.com/syols/go-devops/config"
 	"github.com/syols/go-devops/internal/app"
 	"github.com/syols/go-devops/internal/models"
-	"io"
-	"log"
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"testing"
 	"time"
 )
 
-type MockRoute struct { // добавился слайс тестов
+type Mock struct {
 	route    string
-	response *string
-	request  string
+	request  *models.Metric
+	response models.Metric
 	method   string
 }
 
-func mockSettings(t *testing.T) config.Config {
-	list, err := net.Listen("tcp", ":0")
-	require.NoError(t, err)
+type MetricSuite struct {
+	suite.Suite
+	settings config.Config
+	client   http.Client
+	server   app.Server
+}
 
+func (suite *MetricSuite) SetupTest() {
+	list, err := net.Listen("tcp", ":0")
+	suite.NoError(err)
 	port := list.Addr().(*net.TCPAddr).Port
 	err = list.Close()
-	require.NoError(t, err)
-
-	settings := config.Config{
+	suite.NoError(err)
+	suite.settings = config.Config{
 		Server: config.ServerConfig{
 			Address: config.Address{
 				Host: "0.0.0.0",
 				Port: uint16(port),
 			},
 		},
-		Agent: config.AgentConfig{},
 		Store: config.StoreConfig{
 			StoreInterval: time.Second * 10,
 		},
 	}
-	return settings
-}
-
-func mockClientServer(settings config.Config) http.Client {
-	log.SetOutput(os.Stdout)
-	server := app.NewServer(settings)
-	go server.Run()
-	tr := &http.Transport{
+	suite.client = http.Client{Transport: &http.Transport{
 		MaxIdleConns:        10,
 		MaxIdleConnsPerHost: 10,
-	}
-	client := http.Client{Transport: tr}
-	time.Sleep(time.Millisecond * 500)
-	return client
+	}}
 }
 
-func TestPlainServer(t *testing.T) {
-	settings := mockSettings(t)
-	client := mockClientServer(settings)
-	defer client.CloseIdleConnections()
+func (suite *MetricSuite) BeforeTest(suiteName, testName string) {
+	server, err := app.NewServer(suite.settings)
+	suite.NoError(err)
+	go server.Run()
+	time.Sleep(time.Second)
+}
 
-	//Test update - plain/text
+func (suite *MetricSuite) TestUpdateGauge() {
+	value := 1.1
+	metric := models.Metric{
+		Name:       "testGauge",
+		MetricType: "gauge",
+		GaugeValue: &value,
+	}
+	mocks := []Mock{
+		{
+			route:    "/update/gauge/testGauge/1.1",
+			request:  nil,
+			response: metric,
+			method:   "POST",
+		},
+		{
+			route:    "/value/gauge/testGauge",
+			request:  nil,
+			response: metric,
+			method:   "GET",
+		},
+	}
+	for _, mock := range mocks {
+		suite.check(mock)
+	}
+}
+
+func (suite *MetricSuite) TestUpdateGaugeJSON() {
+	value := 1.1
+	metric := models.Metric{
+		Name:       "testGauge",
+		MetricType: "gauge",
+		GaugeValue: &value,
+	}
+	mock := Mock{
+		route:    "/update/",
+		request:  &metric,
+		response: metric,
+		method:   "POST",
+	}
+	suite.check(mock)
+}
+
+func (suite *MetricSuite) TestUpdateCounter() {
+	value := uint64(1)
+	metric := models.Metric{
+		Name:         "test",
+		MetricType:   "counter",
+		CounterValue: &value,
+	}
+	updatedValue := uint64(3)
+	updatedMetric := models.Metric{
+		Name:         "test",
+		MetricType:   "counter",
+		CounterValue: &updatedValue,
+	}
+	mocks := []Mock{
+		{
+			route:    "/update/counter/test/1",
+			request:  nil,
+			response: metric,
+			method:   "POST",
+		}, {
+			route:    "/update/counter/test/2",
+			request:  nil,
+			response: updatedMetric,
+			method:   "POST",
+		}, {
+			route:    "/value/counter/test",
+			request:  nil,
+			response: updatedMetric,
+			method:   "GET",
+		},
+	}
+	for _, mock := range mocks {
+		suite.check(mock)
+	}
+}
+
+func (suite *MetricSuite) TestUpdateCounterJSON() {
+	value := uint64(1)
+	metric := models.Metric{
+		Name:         "test",
+		MetricType:   "counter",
+		CounterValue: &value,
+	}
+	updatedValue := uint64(2)
+	updatedMetric := models.Metric{
+		Name:         "test",
+		MetricType:   "counter",
+		CounterValue: &updatedValue,
+	}
+	mocks := []Mock{
+		{
+			route:    "/update/",
+			request:  &metric,
+			response: metric,
+			method:   "POST",
+		}, {
+			route:    "/update/",
+			request:  &metric,
+			response: updatedMetric,
+			method:   "POST",
+		},
+	}
+	for _, mock := range mocks {
+		suite.check(mock)
+	}
+}
+
+func (suite *MetricSuite) check(mock Mock) {
 	uri := url.URL{
 		Scheme: "http",
-		Host:   settings.Address(),
-		Path:   "/update/counter/PollCount/1",
+		Host:   suite.settings.Address(),
+		Path:   mock.route,
 	}
-	checkPlainText(t, MockRoute{
-		route:  uri.String(),
-		method: http.MethodPost,
-	}, client)
 
-	responseString := "1"
-	uri = url.URL{
-		Scheme: "http",
-		Host:   settings.Address(),
-		Path:   "/value/counter/PollCount",
-	}
-	checkPlainText(t, MockRoute{
-		route:    uri.String(),
-		response: &responseString,
-		method:   http.MethodGet,
-	}, client)
-}
+	requestBytes, err := json.Marshal(mock.request)
+	suite.NoError(err)
 
-func TestJsonServer(t *testing.T) {
-	log.SetOutput(os.Stdout)
-	settings := mockSettings(t)
-	client := mockClientServer(settings)
-	defer client.CloseIdleConnections()
-
-	uri := url.URL{
-		Scheme: "http",
-		Host:   settings.Address(),
-		Path:   "/update/",
-	}
-	payloadString := string(`{"id":"testGauge","type":"gauge","value":100}`)
-	checkApplicationJSON(t, MockRoute{
-		route:   uri.String(),
-		request: payloadString,
-		method:  http.MethodPost,
-	}, client)
-
-	uri = url.URL{
-		Scheme: "http",
-		Host:   settings.Address(),
-		Path:   "/value/",
-	}
-	checkApplicationJSON(t, MockRoute{
-		route:    uri.String(),
-		request:  payloadString,
-		response: &payloadString,
-		method:   http.MethodPost,
-	}, client)
-}
-
-func checkPlainText(t *testing.T, test MockRoute, client http.Client) {
-	request, err := http.NewRequest(test.method, test.route, bytes.NewBufferString(test.request))
-	require.NoError(t, err)
-
-	response, err := client.Do(request)
-	require.NoError(t, err)
-
-	if test.response != nil {
-		if body, err := io.ReadAll(response.Body); err == nil {
-			value := string(body)
-			assert.Equal(t, value, *test.response, "Test failed")
-		}
-	}
-	require.NoError(t, response.Body.Close())
-}
-
-func checkApplicationJSON(t *testing.T, test MockRoute, client http.Client) {
-	request, err := http.NewRequest(test.method, test.route, bytes.NewBufferString(test.request))
+	request, err := http.NewRequest(mock.method, uri.String(), bytes.NewReader(requestBytes))
 	request.Header.Set("Content-Type", "application/json")
-	require.NoError(t, err)
+	response, err := suite.client.Do(request)
+	suite.NoError(err)
 
-	response, err := client.Do(request)
-	require.NoError(t, err)
+	var responsePayload models.Metric
+	decoder := json.NewDecoder(response.Body)
+	err = decoder.Decode(&responsePayload)
 
-	if test.response != nil {
-		var responsePayload, requestPayload models.Payload
-		decoder := json.NewDecoder(response.Body)
-		assert.NoError(t, decoder.Decode(&responsePayload))
-		assert.NoError(t, json.Unmarshal([]byte(*test.response), &requestPayload))
-		assert.Equal(t, responsePayload, requestPayload)
-	}
+	suite.NoError(err)
+	suite.Equal(responsePayload, mock.response)
+	suite.NoError(response.Body.Close())
+}
 
-	require.NoError(t, response.Body.Close())
+func TestMetricSuite(t *testing.T) {
+	suite.Run(t, new(MetricSuite))
 }
