@@ -19,7 +19,7 @@ func Update(metrics store.MetricsStorage) http.HandlerFunc {
 
 		payload, err := models.NewMetric(metricName, metricType, metricValue, nil)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusNotImplemented)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 

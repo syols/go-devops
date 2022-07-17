@@ -43,6 +43,13 @@ func (p *Metric) String() string {
 	return fmt.Sprintf("%s:counter:%d", p.Name, *p.CounterValue)
 }
 
+func (p *Metric) Value() string {
+	if p.MetricType == "gauge" {
+		return fmt.Sprintf("%.3f", *p.GaugeValue)
+	}
+	return strconv.FormatUint(*p.CounterValue, 10)
+}
+
 func (p *Metric) Check() error {
 	return validate.Struct(p)
 }

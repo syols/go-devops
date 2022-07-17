@@ -24,8 +24,7 @@ func Value(metrics store.MetricsStorage) http.HandlerFunc {
 			return
 		}
 
-		encoder := json.NewEncoder(w)
-		if err := encoder.Encode(value); err != nil {
+		if _, err := w.Write([]byte(value.Value())); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
