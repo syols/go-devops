@@ -1,0 +1,7 @@
+CREATE TABLE metrics (
+     id VARCHAR(256) CONSTRAINT metric_id_pk PRIMARY KEY NOT NULL,
+     metric_type VARCHAR(256) NOT NULL,
+     counter_value NUMERIC DEFAULT NULL,
+     gauge_value DOUBLE PRECISION DEFAULT NULL,
+     hash VARCHAR(256) DEFAULT NULL
+);
