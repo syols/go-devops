@@ -19,14 +19,14 @@ func NewFileStore(storeFile string) FileStore {
 	}
 }
 
-func (f FileStore) Save(ctx context.Context, value []models.Metric) error {
+func (f FileStore) Save(_ context.Context, value []models.Metric) error {
 	jsonBytes, err := json.Marshal(value)
 	if err != nil {
 		return err
 	}
 
 	if err := os.Remove(f.storeFile); err != nil {
-		return err
+		log.Println(err)
 	}
 
 	file, err := os.Create(f.storeFile)

@@ -33,5 +33,6 @@ func TestStartServer(t *testing.T) {
 	sets, err := settings(t)
 	require.NoError(t, err)
 	server, err := app.NewServer(sets)
+	require.NoError(t, err)
 	go server.Run()
 }

@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 )
 
 type Server struct {
@@ -35,9 +34,9 @@ func NewServer(settings config.Config) (Server, error) {
 }
 
 func (s *Server) Run() {
-	sign := make(chan os.Signal, 1)
-	signal.Notify(sign, syscall.SIGINT, syscall.SIGTERM)
-	s.shutdown(sign)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+	s.shutdown(ctx)
 
 	server := http.Server{
 		Addr:    s.settings.Address(),
@@ -54,6 +53,8 @@ func (s *Server) router() *chi.Mux {
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 	router.Use(handlers.Compress)
+	router.Use(handlers.Logging)
+	router.Use(handlers.Save(s.metrics))
 
 	router.Get("/", handlers.Healthcheck)
 	router.Get("/ping", handlers.Ping(s.metrics))
@@ -65,18 +66,18 @@ func (s *Server) router() *chi.Mux {
 	return router
 }
 
-func (s *Server) shutdown(sign chan os.Signal) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
+func (s *Server) shutdown(ctx context.Context) {
 	go func() {
-		<-sign
+		<-ctx.Done()
 		if err := s.server.Shutdown(ctx); err != nil {
 			log.Fatal(err)
 		}
-		err := s.metrics.Save(ctx)
-		if err != nil {
-			log.Fatal(err)
+
+		if s.settings.Store.DatabaseConnectionString == nil {
+			err := s.metrics.Save(ctx)
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 		os.Exit(0)
 	}()

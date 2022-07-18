@@ -34,7 +34,7 @@ func NewDatabaseStore(connectionString string) (DatabaseStore, error) {
 	}
 
 	if _, err := db.Exec(loadSQL("create.sql")); err != nil {
-		return DatabaseStore{}, err
+		log.Print(err)
 	}
 
 	return DatabaseStore{

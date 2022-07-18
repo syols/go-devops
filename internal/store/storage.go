@@ -78,7 +78,12 @@ func (m MetricsStorage) Load(ctx context.Context) {
 }
 
 func (m MetricsStorage) Save(ctx context.Context) error {
-	result := make([]models.Metric, len(m.Metrics))
+	length := len(m.Metrics)
+	if length == 0 {
+		return nil
+	}
+
+	var result []models.Metric
 	for _, v := range m.Metrics {
 		result = append(result, v)
 	}

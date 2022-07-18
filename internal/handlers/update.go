@@ -1,14 +1,12 @@
 package handlers
 
 import (
-	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
 	"github.com/syols/go-devops/internal/models"
 	"github.com/syols/go-devops/internal/store"
 	"net/http"
-	"time"
 )
 
 func Update(metrics store.MetricsStorage) http.HandlerFunc {
@@ -17,24 +15,11 @@ func Update(metrics store.MetricsStorage) http.HandlerFunc {
 		metricValue := chi.URLParam(r, "value")
 		metricName := chi.URLParam(r, "name")
 
-		payload, err := models.NewMetric(metricName, metricType, metricValue, nil)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		payload := models.NewMetric(metricName, metricType, metricValue, nil)
+		if !update(w, payload, nil, metrics) {
 			return
 		}
 
-		oldPayload, isOk := metrics.Metrics[metricName]
-		if isOk {
-			if metricType != oldPayload.MetricType {
-				http.Error(w, "wrong type name", http.StatusNotImplemented)
-				return
-			}
-			if payload.MetricType == "counter" {
-				*payload.CounterValue += *oldPayload.CounterValue
-			}
-		}
-
-		metrics.Metrics[payload.Name] = payload
 		encoder := json.NewEncoder(w)
 		if err := encoder.Encode(payload); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -57,39 +42,9 @@ func UpdateJSON(metrics store.MetricsStorage, key *string) http.HandlerFunc {
 			return
 		}
 
-		err := payload.Check()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		if !update(w, payload, key, metrics) {
+			return
 		}
-
-		calc := payload.CalculateHash(key)
-		fmt.Println(calc)
-		if payload.Hash != payload.CalculateHash(key) {
-			http.Error(w, "wrong hash sum", http.StatusBadRequest)
-		}
-
-		oldPayload, isOk := metrics.Metrics[payload.Name]
-		if isOk {
-			if payload.MetricType != oldPayload.MetricType {
-				http.Error(w, "wrong type name", http.StatusNotImplemented)
-				return
-			}
-			if payload.MetricType == "counter" {
-				*payload.CounterValue += *oldPayload.CounterValue
-			}
-		}
-
-		metrics.Metrics[payload.Name] = payload
-		if metrics.SaveInterval == 0 || metrics.Store.Type() == "database" {
-			ctx, cancel := context.WithTimeout(r.Context(), 5*time.Second)
-			defer cancel()
-			err := metrics.Save(ctx)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-		}
-
 		encoder := json.NewEncoder(w)
 		if err := encoder.Encode(payload); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -113,26 +68,9 @@ func UpdatesJSON(metrics store.MetricsStorage, key *string) http.HandlerFunc {
 		}
 
 		for _, payload := range payloads {
-			err := payload.Check()
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
+			if !update(w, payload, key, metrics) {
+				return
 			}
-
-			if payload.Hash != payload.CalculateHash(key) {
-				http.Error(w, "wrong hash sum", http.StatusBadRequest)
-			}
-
-			oldPayload, isOk := metrics.Metrics[payload.Name]
-			if isOk {
-				if payload.MetricType != oldPayload.MetricType {
-					http.Error(w, "wrong type name", http.StatusNotImplemented)
-					return
-				}
-				if payload.MetricType == "counter" {
-					*payload.CounterValue += *oldPayload.CounterValue
-				}
-			}
-			metrics.Metrics[payload.Name] = payload
 		}
 
 		encoder := json.NewEncoder(w)
@@ -141,4 +79,37 @@ func UpdatesJSON(metrics store.MetricsStorage, key *string) http.HandlerFunc {
 			return
 		}
 	}
+}
+
+func update(w http.ResponseWriter, payload models.Metric, key *string, metrics store.MetricsStorage) bool {
+	err := payload.Check()
+	if err, ok := err.(validator.ValidationErrors); ok {
+		if err[0].Tag() == "metric" {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return false
+		}
+		http.Error(w, err.Error(), http.StatusNotImplemented)
+		return false
+	}
+
+	hash := payload.CalculateHash(key)
+	if payload.Hash != hash {
+		http.Error(w, "wrong hash sum", http.StatusBadRequest)
+		return false
+	}
+
+	oldPayload, isOk := metrics.Metrics[payload.Name]
+	if isOk {
+		if payload.MetricType != oldPayload.MetricType {
+			http.Error(w, "wrong type name", http.StatusNotImplemented)
+			return false
+		}
+		if payload.MetricType == "counter" {
+			*payload.CounterValue += *oldPayload.CounterValue
+		}
+	}
+
+	payload.Hash = payload.CalculateHash(key)
+	metrics.Metrics[payload.Name] = payload
+	return true
 }

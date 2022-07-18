@@ -13,27 +13,54 @@ var validate *validator.Validate
 
 type Metric struct {
 	Name         string   `json:"id" db:"id" validate:"required"`
-	MetricType   string   `json:"type" db:"metric_type" validate:"required_with='counter' 'gauge',metricValidation"`
-	CounterValue *uint64  `json:"delta,omitempty" db:"counter_value"`
-	GaugeValue   *float64 `json:"value,omitempty" db:"gauge_value"`
+	MetricType   string   `json:"type" db:"metric_type" validate:"metricType,metric"`
+	CounterValue *uint64  `json:"delta,omitempty" db:"counter_value" validate:"omitempty,metricCounter"`
+	GaugeValue   *float64 `json:"value,omitempty" db:"gauge_value" validate:"omitempty,metricGauge"`
 	Hash         string   `json:"hash,omitempty" db:"hash"`
 }
 
 func init() {
 	validate = validator.New()
-	if err := validate.RegisterValidation("metricValidation", metricValidation); err != nil {
-		log.Println(err)
+	if err := validate.RegisterValidation("metric", metricValidation); err != nil {
+		log.Fatal(err)
+	}
+	if err := validate.RegisterValidation("metricType", metricTypeValidation); err != nil {
+		log.Fatal(err)
+	}
+	if err := validate.RegisterValidation("metricGauge", metricGaugeValidation); err != nil {
+		log.Fatal(err)
+	}
+	if err := validate.RegisterValidation("metricCounter", metricCounterValidation); err != nil {
+		log.Fatal(err)
 	}
 }
 
-func metricValidation(fl validator.FieldLevel) bool {
-	metric, ok := fl.Parent().Interface().(Metric)
-	if !ok {
-		return false
+func metricGaugeValidation(fl validator.FieldLevel) bool {
+	if metric, ok := fl.Parent().Interface().(Metric); ok {
+		return metric.MetricType == "gauge" && metric.GaugeValue != nil
 	}
+	return false
+}
 
-	return (metric.CounterValue != nil && metric.MetricType == "counter") ||
-		(metric.GaugeValue != nil && metric.MetricType == "gauge")
+func metricCounterValidation(fl validator.FieldLevel) bool {
+	if metric, ok := fl.Parent().Interface().(Metric); ok {
+		return metric.MetricType == "counter" && metric.CounterValue != nil
+	}
+	return false
+}
+
+func metricTypeValidation(fl validator.FieldLevel) bool {
+	if metric, ok := fl.Parent().Interface().(Metric); ok {
+		return metric.MetricType == "counter" || metric.MetricType == "gauge"
+	}
+	return false
+}
+
+func metricValidation(fl validator.FieldLevel) bool {
+	if metric, ok := fl.Parent().Interface().(Metric); ok {
+		return metric.CounterValue != nil || metric.GaugeValue != nil
+	}
+	return false
 }
 
 func (p *Metric) String() string {
@@ -54,7 +81,7 @@ func (p *Metric) Check() error {
 	return validate.Struct(p)
 }
 
-func NewMetric(name, typeName, value string, key *string) (Metric, error) {
+func NewMetric(name, typeName, value string, key *string) Metric {
 	payload := Metric{
 		Name:       name,
 		MetricType: typeName,
@@ -75,14 +102,13 @@ func NewMetric(name, typeName, value string, key *string) (Metric, error) {
 	}
 
 	payload.Hash = payload.CalculateHash(key)
-	return payload, payload.Check()
+	return payload
 }
 
 func (p *Metric) CalculateHash(key *string) (result string) {
 	if key != nil {
 		h := hmac.New(sha256.New, []byte(*key))
-		hashString := p.String()
-		h.Write([]byte(hashString))
+		h.Write([]byte(p.String()))
 		result = fmt.Sprintf("%x", h.Sum(nil))
 	}
 	return

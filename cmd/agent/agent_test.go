@@ -5,7 +5,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/syols/go-devops/config"
 	"github.com/syols/go-devops/internal/app"
-	"log"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -40,7 +39,6 @@ func handlers(t *testing.T) http.Handler {
 		assert.Fail(t, "Count metric not updated")
 	})
 	r.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		log.Printf(r.URL.Path)
 	})
 	return r
 }
@@ -59,10 +57,8 @@ func TestAgent(t *testing.T) {
 	defer server.Close()
 
 	client := app.NewHTTPClient(settings)
-	metrics := app.CollectMetrics()
+	metrics := app.CollectMetrics(settings.Server.Key)
 	client.SetMetrics(metrics)
 	err = client.SendMetrics()
 	assert.NoError(t, err)
-
-	client.Client.CloseIdleConnections()
 }

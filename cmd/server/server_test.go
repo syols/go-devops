@@ -73,10 +73,10 @@ func (suite *MetricSuite) TestUpdateGauge() {
 			method:   "POST",
 		},
 		{
-			route:    "/value/gauge/testGauge",
-			request:  nil,
+			route:    "/value/",
+			request:  &metric,
 			response: metric,
-			method:   "GET",
+			method:   "POST",
 		},
 	}
 	for _, mock := range mocks {
@@ -125,10 +125,10 @@ func (suite *MetricSuite) TestUpdateCounter() {
 			response: updatedMetric,
 			method:   "POST",
 		}, {
-			route:    "/value/counter/test",
-			request:  nil,
+			route:    "/value/",
+			request:  &metric,
 			response: updatedMetric,
-			method:   "GET",
+			method:   "POST",
 		},
 	}
 	for _, mock := range mocks {
@@ -178,6 +178,7 @@ func (suite *MetricSuite) check(mock Mock) {
 	suite.NoError(err)
 
 	request, err := http.NewRequest(mock.method, uri.String(), bytes.NewReader(requestBytes))
+	suite.NoError(err)
 	request.Header.Set("Content-Type", "application/json")
 	response, err := suite.client.Do(request)
 	suite.NoError(err)

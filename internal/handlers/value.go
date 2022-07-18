@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
 	"github.com/syols/go-devops/internal/models"
 	"github.com/syols/go-devops/internal/store"
 	"net/http"
@@ -45,22 +46,28 @@ func ValueJSON(metrics store.MetricsStorage) http.HandlerFunc {
 			return
 		}
 
-		if err := payload.Check(); err != nil {
-			http.Error(w, err.Error(), http.StatusNotImplemented)
-			return
-		}
-
-		value, isOk := metrics.Metrics[payload.Name]
-		if isOk {
-			if value.MetricType != payload.MetricType {
-				http.Error(w, "wrong type name", http.StatusNotImplemented)
+		err := payload.Check()
+		if err, ok := err.(validator.ValidationErrors); ok {
+			if err[0].Tag() == "metricType" {
+				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
 		}
 
-		metrics.Metrics[payload.Name] = payload
+		value, isOk := metrics.Metrics[payload.Name]
+		if !isOk {
+			http.Error(w, "value not found", http.StatusNotFound)
+			return
+		}
+
+		if value.MetricType != payload.MetricType {
+			http.Error(w, "wrong type name", http.StatusNotImplemented)
+			return
+		}
+
+		value.Hash = value.CalculateHash(metrics.Key)
 		encoder := json.NewEncoder(w)
-		if err := encoder.Encode(payload); err != nil {
+		if err := encoder.Encode(value); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

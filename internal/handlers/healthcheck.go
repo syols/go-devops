@@ -6,6 +6,7 @@ import (
 )
 
 func Healthcheck(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
 	if _, err := w.Write([]byte("OK")); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}

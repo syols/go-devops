@@ -2,70 +2,76 @@ package app
 
 import (
 	"bytes"
+	"encoding/json"
 	"github.com/syols/go-devops/config"
 	"github.com/syols/go-devops/internal/models"
-	"github.com/syols/go-devops/internal/store"
 	"math/rand"
 	"net/http"
 	"net/url"
 	"runtime"
-	"strconv"
-	"strings"
 )
 
 type Client struct {
 	Client  http.Client
-	scheme  string
-	address string
-	metrics map[string]models.Metric
+	metrics []models.Metric
 	count   uint64
+	url     string
+	key     *string
 }
 
 func NewHTTPClient(settings config.Config) Client {
 	transport := &http.Transport{
-		MaxIdleConns:        10,
-		MaxIdleConnsPerHost: 10,
+		MaxIdleConns:        40,
+		MaxIdleConnsPerHost: 40,
 	}
 	client := http.Client{Transport: transport}
+
+	uri := url.URL{
+		Scheme: "http",
+		Host:   settings.Address(),
+		Path:   "/update/",
+	}
+
 	return Client{
 		Client:  client,
-		scheme:  "http",
-		address: settings.Address(),
-		metrics: map[string]models.Metric{},
+		metrics: []models.Metric{},
+		url:     uri.String(),
+		key:     settings.Server.Key,
 	}
 }
 
-func (c *Client) SetMetrics(metrics map[string]models.Metric) {
+func (c *Client) SetMetrics(metrics []models.Metric) {
 	c.metrics = metrics
 }
 
 func (c *Client) SendMetrics() error {
-	for _, metricValue := range c.metrics {
-		err := c.post(metricValue)
+	c.count++
+	pollCount := models.Metric{Name: "PollCount", CounterValue: &c.count, MetricType: "counter"}
+	pollCount.Hash = pollCount.CalculateHash(c.key)
+
+	for _, metric := range append([]models.Metric{pollCount}, c.metrics...) {
+		requestBytes, err := json.Marshal(metric)
+		if err != nil {
+			return err
+		}
+		resp, err := http.Post(c.url, "application/json", bytes.NewBuffer(requestBytes))
+		if err != nil {
+			return err
+		}
+
+		err = resp.Body.Close()
 		if err != nil {
 			return err
 		}
 	}
-	c.count++
-	pollCount := models.Metric{Name: "PollCount", CounterValue: &c.count, MetricType: "counter"}
-	err := c.post(pollCount)
-	if err != nil {
-		return err
-	}
-
-	value := rand.Float64()
-	randomValue := models.Metric{Name: "RandomValue", GaugeValue: &value, MetricType: "gauge"}
-	err = c.post(randomValue)
-	if err != nil {
-		return err
-	}
 	return nil
 }
 
-func CollectMetrics() store.Metrics {
-	metrics := make(map[string]models.Metric)
+func CollectMetrics(key *string) []models.Metric {
+	metrics := make([]models.Metric, 0)
 
 	var stats runtime.MemStats
+	runtime.ReadMemStats(&stats)
 	val := map[string]float64{
 		"Alloc":         float64(stats.Alloc),
 		"BuckHashSys":   float64(stats.BuckHashSys),
@@ -94,50 +100,18 @@ func CollectMetrics() store.Metrics {
 		"StackSys":      float64(stats.StackSys),
 		"Sys":           float64(stats.Sys),
 		"TotalAlloc":    float64(stats.TotalAlloc),
+		"RandomValue":   rand.Float64(),
 	}
 
 	for name, value := range val {
-		metrics[name] = models.Metric{
+		val := value
+		metric := models.Metric{
 			Name:       name,
 			MetricType: "gauge",
-			GaugeValue: &value,
+			GaugeValue: &val,
 		}
+		metric.Hash = metric.CalculateHash(key)
+		metrics = append(metrics, metric)
 	}
 	return metrics
-}
-
-func (c *Client) post(metric models.Metric) error {
-	payload := c.payload(metric)
-	request, err := http.NewRequest(http.MethodPost, c.endpoint(metric), bytes.NewBufferString(payload))
-	if err != nil {
-		return err
-	}
-
-	request.Header.Add("Content-Type", "text/plain")
-	request.Header.Add("Content-Length", strconv.Itoa(len(payload)))
-	response, err := c.Client.Do(request)
-	if err != nil {
-		return err
-	}
-
-	err = response.Body.Close()
-	if err != nil {
-		return err
-	}
-
-	defer c.Client.CloseIdleConnections()
-	return nil
-}
-
-func (c *Client) endpoint(metric models.Metric) string {
-	result := url.URL{
-		Scheme: c.scheme,
-		Host:   c.address,
-		Path:   strings.Join([]string{"update", metric.MetricType, metric.Name, metric.String()}, "/"),
-	}
-	return result.String()
-}
-
-func (c *Client) payload(metric models.Metric) string {
-	return strings.Join([]string{"update", metric.MetricType, metric.Name, metric.String()}, "::")
 }
