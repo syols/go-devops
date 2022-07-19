@@ -1,19 +1,38 @@
 package main
 
 import (
-	"github.com/syols/go-devops/internal"
-	"github.com/syols/go-devops/internal/settings"
-	"log"
-	"os"
+	"github.com/stretchr/testify/require"
+	"github.com/syols/go-devops/config"
+	"github.com/syols/go-devops/internal/app"
+	"net"
 	"testing"
+	"time"
 )
 
-func TestStartApplication(t *testing.T) {
-	log.SetOutput(os.Stdout)
-	sets := settings.NewSettings()
-	server := internal.NewServer(sets)
-	client := internal.NewHTTPClient(sets)
+func settings(t *testing.T) (config.Config, error) {
+	list, err := net.Listen("tcp", ":0")
+	require.NoError(t, err)
+	port := list.Addr().(*net.TCPAddr).Port
+	err = list.Close()
+	require.NoError(t, err)
+	settings := config.Config{
+		Server: config.ServerConfig{
+			Address: config.Address{
+				Host: "0.0.0.0",
+				Port: uint16(port),
+			},
+		},
+		Store: config.StoreConfig{
+			StoreInterval: time.Second * 10,
+		},
+	}
+	return settings, err
+}
+
+func TestStartServer(t *testing.T) {
+	sets, err := settings(t)
+	require.NoError(t, err)
+	server, err := app.NewServer(sets)
+	require.NoError(t, err)
 	go server.Run()
-	go client.SetMetrics(internal.CollectMetrics())
-	go client.SendMetrics()
 }
