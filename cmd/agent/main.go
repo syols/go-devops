@@ -18,14 +18,10 @@ func main() {
 	for {
 		select {
 		case <-pollTicker.C:
-			go client.SetMetrics(app.CollectMetrics(settings.Server.Key))
+			go client.CollectMetrics()
+			go client.CollectAdditionalMetrics()
 		case <-reportTicker.C:
-			go func() {
-				err := client.SendMetrics()
-				if err != nil {
-					log.Print(err)
-				}
-			}()
+			go client.SendMetrics()
 		}
 	}
 }

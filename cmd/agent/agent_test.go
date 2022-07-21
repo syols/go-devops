@@ -57,8 +57,7 @@ func TestAgent(t *testing.T) {
 	defer server.Close()
 
 	client := app.NewHTTPClient(settings)
-	metrics := app.CollectMetrics(settings.Server.Key)
-	client.SetMetrics(metrics)
-	err = client.SendMetrics()
+	client.CollectMetrics()
+	client.SendMetrics()
 	assert.NoError(t, err)
 }
