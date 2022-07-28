@@ -2,10 +2,11 @@ package store
 
 import (
 	"context"
-	"github.com/syols/go-devops/config"
-	"github.com/syols/go-devops/internal/models"
 	"log"
 	"time"
+
+	"github.com/syols/go-devops/config"
+	"github.com/syols/go-devops/internal/models"
 )
 
 type Store interface {

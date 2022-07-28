@@ -3,6 +3,7 @@ package internal
 import (
 	"github.com/syols/go-devops/config"
 	"gopkg.in/yaml.v3"
+
 	"testing"
 )
 

@@ -4,10 +4,14 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"fmt"
-	"github.com/go-playground/validator/v10"
 	"log"
 	"strconv"
+
+	"github.com/go-playground/validator/v10"
 )
+
+const GaugeName = "gauge"
+const CounterName = "counter"
 
 var validate *validator.Validate
 
@@ -37,21 +41,21 @@ func init() {
 
 func metricGaugeValidation(fl validator.FieldLevel) bool {
 	if metric, ok := fl.Parent().Interface().(Metric); ok {
-		return metric.MetricType == "gauge" && metric.GaugeValue != nil
+		return metric.MetricType == GaugeName && metric.GaugeValue != nil
 	}
 	return false
 }
 
 func metricCounterValidation(fl validator.FieldLevel) bool {
 	if metric, ok := fl.Parent().Interface().(Metric); ok {
-		return metric.MetricType == "counter" && metric.CounterValue != nil
+		return metric.MetricType == CounterName && metric.CounterValue != nil
 	}
 	return false
 }
 
 func metricTypeValidation(fl validator.FieldLevel) bool {
 	if metric, ok := fl.Parent().Interface().(Metric); ok {
-		return metric.MetricType == "counter" || metric.MetricType == "gauge"
+		return metric.MetricType == CounterName || metric.MetricType == GaugeName
 	}
 	return false
 }
@@ -64,14 +68,14 @@ func metricValidation(fl validator.FieldLevel) bool {
 }
 
 func (p *Metric) String() string {
-	if p.MetricType == "gauge" {
+	if p.MetricType == GaugeName {
 		return fmt.Sprintf("%s:gauge:%f", p.Name, *p.GaugeValue)
 	}
 	return fmt.Sprintf("%s:counter:%d", p.Name, *p.CounterValue)
 }
 
 func (p *Metric) Value() string {
-	if p.MetricType == "gauge" {
+	if p.MetricType == GaugeName {
 		return fmt.Sprintf("%.3f", *p.GaugeValue)
 	}
 	return strconv.FormatUint(*p.CounterValue, 10)
@@ -87,14 +91,14 @@ func NewMetric(name, typeName, value string, key *string) Metric {
 		MetricType: typeName,
 	}
 
-	if payload.MetricType == "gauge" {
+	if payload.MetricType == GaugeName {
 		v, err := strconv.ParseFloat(value, 64)
 		if err == nil {
 			payload.GaugeValue = &v
 		}
 	}
 
-	if payload.MetricType == "counter" {
+	if payload.MetricType == CounterName {
 		v, err := strconv.ParseUint(value, 10, 64)
 		if err == nil {
 			payload.CounterValue = &v

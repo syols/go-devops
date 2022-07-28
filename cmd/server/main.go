@@ -1,10 +1,11 @@
 package main
 
 import (
-	"github.com/syols/go-devops/config"
-	"github.com/syols/go-devops/internal/app"
 	"log"
 	"os"
+
+	"github.com/syols/go-devops/config"
+	"github.com/syols/go-devops/internal/app"
 )
 
 func main() {

@@ -1,8 +1,9 @@
 package handlers
 
 import (
-	"github.com/syols/go-devops/internal/store"
 	"net/http"
+
+	"github.com/syols/go-devops/internal/store"
 )
 
 func Healthcheck(w http.ResponseWriter, _ *http.Request) {

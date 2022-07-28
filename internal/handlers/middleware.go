@@ -3,12 +3,13 @@ package handlers
 import (
 	"compress/gzip"
 	"context"
-	"github.com/syols/go-devops/internal/store"
 	"io"
 	"log"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/syols/go-devops/internal/store"
 )
 
 type gzipWriter struct {
@@ -19,6 +20,8 @@ type gzipWriter struct {
 func (w gzipWriter) Write(b []byte) (int, error) {
 	return w.Writer.Write(b)
 }
+
+const ContentType = "application/json"
 
 func Compress(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

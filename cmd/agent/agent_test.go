@@ -1,14 +1,21 @@
 package main
 
 import (
+	"context"
+	"net"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"os/signal"
+	"sync"
+	"syscall"
+	"testing"
+	"time"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/syols/go-devops/config"
 	"github.com/syols/go-devops/internal/app"
-	"net"
-	"net/http"
-	"net/http/httptest"
-	"testing"
 )
 
 func mockSettings(t *testing.T) config.Config {
@@ -25,6 +32,13 @@ func mockSettings(t *testing.T) config.Config {
 				Host: "0.0.0.0",
 				Port: uint16(port),
 			},
+		},
+		Store: config.StoreConfig{
+			StoreInterval: time.Second,
+		},
+		Agent: config.AgentConfig{
+			PollInterval:   time.Second,
+			ReportInterval: time.Second,
 		},
 	}
 	return settings
@@ -56,8 +70,14 @@ func TestAgent(t *testing.T) {
 	server.Start()
 	defer server.Close()
 
+	var wg sync.WaitGroup
 	client := app.NewHTTPClient(settings)
-	client.CollectMetrics()
-	client.SendMetrics()
+	wg.Add(3)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	go client.CollectAdditionalMetrics(ctx, &wg)
+	go client.CollectMetrics(ctx, &wg)
+	go client.SendMetrics(ctx, &wg)
+	cancel()
+	wg.Wait()
 	assert.NoError(t, err)
 }

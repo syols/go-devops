@@ -3,15 +3,16 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/stretchr/testify/suite"
-	"github.com/syols/go-devops/config"
-	"github.com/syols/go-devops/internal/app"
-	"github.com/syols/go-devops/internal/models"
 	"net"
 	"net/http"
 	"net/url"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/suite"
+	"github.com/syols/go-devops/config"
+	"github.com/syols/go-devops/internal/app"
+	"github.com/syols/go-devops/internal/models"
 )
 
 type Mock struct {
@@ -25,7 +26,6 @@ type MetricSuite struct {
 	suite.Suite
 	settings config.Config
 	client   http.Client
-	server   app.Server
 }
 
 func (suite *MetricSuite) SetupTest() {
@@ -62,7 +62,7 @@ func (suite *MetricSuite) TestUpdateGauge() {
 	value := 1.1
 	metric := models.Metric{
 		Name:       "testGauge",
-		MetricType: "gauge",
+		MetricType: models.GaugeName,
 		GaugeValue: &value,
 	}
 	mocks := []Mock{
@@ -88,7 +88,7 @@ func (suite *MetricSuite) TestUpdateGaugeJSON() {
 	value := 1.1
 	metric := models.Metric{
 		Name:       "testGauge",
-		MetricType: "gauge",
+		MetricType: models.GaugeName,
 		GaugeValue: &value,
 	}
 	mock := Mock{
@@ -104,13 +104,13 @@ func (suite *MetricSuite) TestUpdateCounter() {
 	value := uint64(1)
 	metric := models.Metric{
 		Name:         "test",
-		MetricType:   "counter",
+		MetricType:   models.CounterName,
 		CounterValue: &value,
 	}
 	updatedValue := uint64(3)
 	updatedMetric := models.Metric{
 		Name:         "test",
-		MetricType:   "counter",
+		MetricType:   models.CounterName,
 		CounterValue: &updatedValue,
 	}
 	mocks := []Mock{
@@ -140,13 +140,13 @@ func (suite *MetricSuite) TestUpdateCounterJSON() {
 	value := uint64(1)
 	metric := models.Metric{
 		Name:         "test",
-		MetricType:   "counter",
+		MetricType:   models.CounterName,
 		CounterValue: &value,
 	}
 	updatedValue := uint64(2)
 	updatedMetric := models.Metric{
 		Name:         "test",
-		MetricType:   "counter",
+		MetricType:   models.CounterName,
 		CounterValue: &updatedValue,
 	}
 	mocks := []Mock{

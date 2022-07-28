@@ -2,11 +2,12 @@ package handlers
 
 import (
 	"encoding/json"
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/syols/go-devops/internal/models"
 	"github.com/syols/go-devops/internal/store"
-	"net/http"
 )
 
 func Update(metrics store.MetricsStorage) http.HandlerFunc {
@@ -30,7 +31,7 @@ func Update(metrics store.MetricsStorage) http.HandlerFunc {
 
 func UpdateJSON(metrics store.MetricsStorage, key *string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Content-Type") != "application/json" {
+		if r.Header.Get("Content-Type") != ContentType {
 			http.Error(w, "wrong content type", http.StatusUnsupportedMediaType)
 			return
 		}
@@ -55,7 +56,7 @@ func UpdateJSON(metrics store.MetricsStorage, key *string) http.HandlerFunc {
 
 func UpdatesJSON(metrics store.MetricsStorage, key *string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Content-Type") != "application/json" {
+		if r.Header.Get("Content-Type") != ContentType {
 			http.Error(w, "wrong content type", http.StatusUnsupportedMediaType)
 			return
 		}
@@ -104,7 +105,7 @@ func update(w http.ResponseWriter, payload models.Metric, key *string, metrics s
 			http.Error(w, "wrong type name", http.StatusNotImplemented)
 			return false
 		}
-		if payload.MetricType == "counter" {
+		if payload.MetricType == models.CounterName {
 			*payload.CounterValue += *oldPayload.CounterValue
 		}
 	}

@@ -7,8 +7,8 @@ server:
   key: null
 
 agent:
-  poll_interval: 1s
-  report_interval: 1s
+  poll_interval: 2s
+  report_interval: 3s
   client_timeout: 1s
 
 store:
