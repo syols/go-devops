@@ -2,11 +2,12 @@ package config
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"io/ioutil"
 	"net"
 	"strconv"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 type Option func(s *Config)

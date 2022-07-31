@@ -2,11 +2,12 @@ package handlers
 
 import (
 	"encoding/json"
+	"net/http"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/syols/go-devops/internal/models"
 	"github.com/syols/go-devops/internal/store"
-	"net/http"
 )
 
 func Value(metrics store.MetricsStorage) http.HandlerFunc {
@@ -34,7 +35,7 @@ func Value(metrics store.MetricsStorage) http.HandlerFunc {
 
 func ValueJSON(metrics store.MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Content-Type") != "application/json" {
+		if r.Header.Get("Content-Type") != ContentType {
 			http.Error(w, "wrong content type", http.StatusUnsupportedMediaType)
 			return
 		}

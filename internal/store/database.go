@@ -2,12 +2,13 @@ package store
 
 import (
 	"context"
-	"github.com/jmoiron/sqlx"
-	_ "github.com/lib/pq"
-	"github.com/syols/go-devops/internal/models"
 	"io/ioutil"
 	"log"
 	"path/filepath"
+
+	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
+	"github.com/syols/go-devops/internal/models"
 )
 
 type DatabaseStore struct {

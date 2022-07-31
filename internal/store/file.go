@@ -3,10 +3,11 @@ package store
 import (
 	"context"
 	"encoding/json"
-	"github.com/syols/go-devops/internal/models"
 	"io/ioutil"
 	"log"
 	"os"
+
+	"github.com/syols/go-devops/internal/models"
 )
 
 type FileStore struct {

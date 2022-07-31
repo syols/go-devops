@@ -2,16 +2,17 @@ package app
 
 import (
 	"context"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/syols/go-devops/config"
-	"github.com/syols/go-devops/internal/handlers"
-	"github.com/syols/go-devops/internal/store"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/syols/go-devops/config"
+	"github.com/syols/go-devops/internal/handlers"
+	"github.com/syols/go-devops/internal/store"
 )
 
 type Server struct {
