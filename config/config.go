@@ -10,25 +10,30 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Option function of a certain type
 type Option func(s *Config)
 
+// Config struct
 type Config struct {
 	Server ServerConfig `yaml:"server"`
 	Agent  AgentConfig  `yaml:"agent"`
 	Store  StoreConfig  `yaml:"store"`
 }
 
+// ServerConfig Server config struct
 type ServerConfig struct {
 	Address Address `yaml:"address"`
 	Key     *string `yaml:"key,omitempty"`
 }
 
+// AgentConfig Agent config struct
 type AgentConfig struct {
 	PollInterval   time.Duration `yaml:"poll_interval"`
 	ReportInterval time.Duration `yaml:"report_interval"`
 	ClientTimeout  time.Duration `yaml:"client_timeout"`
 }
 
+// StoreConfig Store config struct
 type StoreConfig struct {
 	DatabaseConnectionString *string       `yaml:"database,omitempty"`
 	StoreFile                *string       `yaml:"store_file,omitempty"`
@@ -36,11 +41,13 @@ type StoreConfig struct {
 	StoreInterval            time.Duration `yaml:"store_interval"`
 }
 
+// Address struct
 type Address struct {
 	Host string `yaml:"host"`
 	Port uint16 `yaml:"port"`
 }
 
+// NewConfig creates config struct
 func NewConfig() (settings Config) {
 	err := settings.setDefault("develop.yml")
 	if err != nil {
@@ -48,6 +55,19 @@ func NewConfig() (settings Config) {
 	}
 	settings.setFromOptions(NewEnvironmentVariables().Options()...)
 	return settings
+}
+
+// Address create HTTP address
+func (s *Config) Address() string {
+	return fmt.Sprintf("%s:%d", s.Server.Address.Host, s.Server.Address.Port)
+}
+
+// String create string from config
+func (s *Config) String() (result string) {
+	if marshal, err := yaml.Marshal(s); err != nil {
+		result = string(marshal)
+	}
+	return
 }
 
 func (s *Config) setFromOptions(options ...Option) {
@@ -66,17 +86,6 @@ func (s *Config) setDefault(configPath string) error {
 		return err
 	}
 	return nil
-}
-
-func (s *Config) Address() string {
-	return fmt.Sprintf("%s:%d", s.Server.Address.Host, s.Server.Address.Port)
-}
-
-func (s *Config) String() (result string) {
-	if marshal, err := yaml.Marshal(s); err != nil {
-		result = string(marshal)
-	}
-	return
 }
 
 func withAddress(address string) Option {

@@ -11,19 +11,20 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+
 	"github.com/syols/go-devops/config"
 	"github.com/syols/go-devops/internal/handlers"
 	"github.com/syols/go-devops/internal/store"
 )
 
+// Server struct
 type Server struct {
 	server   http.Server
 	metrics  store.MetricsStorage
 	settings config.Config
 }
 
-type Handler func(metrics store.MetricsStorage, key *string, w http.ResponseWriter, r *http.Request)
-
+// NewServer creates server struct
 func NewServer(settings config.Config) (Server, error) {
 	metrics, err := store.NewMetricsStorage(settings)
 	if err != nil {
@@ -35,6 +36,7 @@ func NewServer(settings config.Config) (Server, error) {
 	}, nil
 }
 
+// Run server
 func (s *Server) Run() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()

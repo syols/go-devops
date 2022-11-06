@@ -12,6 +12,12 @@ import (
 	"github.com/syols/go-devops/internal/app"
 )
 
+// @Title Agent API
+// @Description Агент для получения метрик
+// @Version 0.1.0
+
+// @Contact.email some@mail.com
+
 func main() {
 	log.SetOutput(os.Stdout)
 	settings := config.NewConfig()

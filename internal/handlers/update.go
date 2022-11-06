@@ -6,10 +6,22 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
+
 	"github.com/syols/go-devops/internal/models"
 	"github.com/syols/go-devops/internal/store"
 )
 
+// Update godoc
+// @Tags Update
+// @Summary Update metric
+// @Description Update metric request
+// @Produce json
+// @Param type path int64 true "Metric type"
+// @Param value path float64 true "Metric value"
+// @Param name path int64 true "Metric name"
+// @Success 200 {object} Metric
+// @Failure 500 {string} string "StatusInternalServerError"
+// @Router /update/{type}/{name}/{value} [post]
 func Update(metrics store.MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		metricType := chi.URLParam(r, "type")
@@ -29,6 +41,17 @@ func Update(metrics store.MetricsStorage) http.HandlerFunc {
 	}
 }
 
+// UpdateJSON godoc
+// @Tags UpdateJSON
+// @Summary Update metric
+// @Description Update metric request
+// @Produce json
+// @Param Metric body Metric true "Metric"
+// @Success 200 {object} Metric
+// @Failure 415 {string} string "StatusUnsupportedMediaType"
+// @Failure 422 {string} string "StatusUnprocessableEntity"
+// @Failure 500 {string} string "StatusInternalServerError"
+// @Router /update/ [post]
 func UpdateJSON(metrics store.MetricsStorage, key *string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Type") != ContentType {
@@ -54,6 +77,17 @@ func UpdateJSON(metrics store.MetricsStorage, key *string) http.HandlerFunc {
 	}
 }
 
+// UpdatesJSON godoc
+// @Tags UpdatesJSON
+// @Summary Update metrics
+// @Description Update metrics request
+// @Produce json
+// @Param []Metric body []Metric true "Metric list"
+// @Success 200 {object} Metric
+// @Failure 415 {string} string "StatusUnsupportedMediaType"
+// @Failure 422 {string} string "StatusUnprocessableEntity"
+// @Failure 500 {string} string "StatusInternalServerError"
+// @Router /updates/ [post]
 func UpdatesJSON(metrics store.MetricsStorage, key *string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Type") != ContentType {

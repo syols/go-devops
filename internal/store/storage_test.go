@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/golang/mock/gomock"
+
 	"github.com/syols/go-devops/internal/models"
 	mock_store "github.com/syols/go-devops/mock"
 )
