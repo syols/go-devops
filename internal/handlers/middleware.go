@@ -30,7 +30,7 @@ func Compress(next http.Handler) http.Handler {
 			return
 		}
 
-		gz, err := gzip.NewWriterLevel(w, gzip.DefaultCompression)
+		gz, err := gzip.NewWriterLevel(w, gzip.NoCompression)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -45,15 +45,6 @@ func Compress(next http.Handler) http.Handler {
 		w.Header().Set("Content-Encoding", "gzip")
 		w.Header().Add("Content-Type", "application/json")
 		next.ServeHTTP(gzipWriter{ResponseWriter: w, Writer: gz}, r)
-	})
-}
-
-func Logging(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		uri := r.RequestURI
-		method := r.Method
-		next.ServeHTTP(w, r)
-		log.Printf("%s::%s", uri, method)
 	})
 }
 

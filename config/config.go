@@ -46,7 +46,7 @@ func NewConfig() (settings Config) {
 	if err != nil {
 		return Config{}
 	}
-	settings.setFromOptions(newVariables().Options()...)
+	settings.setFromOptions(NewEnvironmentVariables().Options()...)
 	return settings
 }
 

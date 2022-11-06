@@ -22,7 +22,7 @@ func newVariable(env, name string) Variable {
 	}
 }
 
-func newVariables() EnvironmentVariables {
+func NewEnvironmentVariables() EnvironmentVariables {
 	return EnvironmentVariables{
 		newVariable("ADDRESS", "a"):          withAddress,
 		newVariable("REPORT_INTERVAL", "ri"): withReportInterval,
