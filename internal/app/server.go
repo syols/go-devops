@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -54,7 +55,6 @@ func (s *Server) router() *chi.Mux {
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 	router.Use(handlers.Compress)
-	router.Use(handlers.Logging)
 	router.Use(handlers.Save(s.metrics))
 
 	router.Get("/", handlers.Healthcheck)
@@ -64,6 +64,13 @@ func (s *Server) router() *chi.Mux {
 	router.Post("/update/", handlers.UpdateJSON(s.metrics, s.settings.Server.Key))
 	router.Post("/updates/", handlers.UpdatesJSON(s.metrics, s.settings.Server.Key))
 	router.Post("/value/", handlers.ValueJSON(s.metrics))
+
+	// pprof
+	router.HandleFunc("/debug/pprof/", pprof.Index)
+	router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	router.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	router.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	router.HandleFunc("/debug/pprof/trace", pprof.Trace)
 	return router
 }
 
