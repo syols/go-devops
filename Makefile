@@ -10,12 +10,6 @@ server:
 agent:
 	go run cmd/agent/main.go
 
-get:
-	go get golang.org/x/tools/cmd/goimports
-	go get github.com/kisielk/errcheck
-	go get golang.org/x/lint
-	go get github.com/tools/godep
-
 imports:
 	goimports -l -w .
 
@@ -42,4 +36,3 @@ coverage:
 	go tool cover -func profile.cov
 
 run: server
-
