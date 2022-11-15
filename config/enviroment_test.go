@@ -30,7 +30,8 @@ func TestEnvironment(t *testing.T) {
 	t.Setenv("DATABASE_DSN", databaseDsn)
 
 	config := Config{}
-	config.setFromOptions(NewEnvironmentVariables().Options()...)
+	options := NewEnvironmentVariables().Options()
+	config.SetFromOptions(options...)
 	assert.Equal(t, address, config.Address())
 	assert.Equal(t, duration, config.Agent.ReportInterval)
 	assert.Equal(t, duration, config.Agent.PollInterval)
@@ -40,5 +41,4 @@ func TestEnvironment(t *testing.T) {
 	assert.Equal(t, key, *config.Server.Key)
 	assert.Equal(t, storeFile, *config.Store.StoreFile)
 	assert.Equal(t, databaseDsn, *config.Store.DatabaseConnectionString)
-
 }

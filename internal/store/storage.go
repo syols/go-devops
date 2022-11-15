@@ -9,6 +9,7 @@ import (
 	"github.com/syols/go-devops/internal/models"
 )
 
+// Store interface
 type Store interface {
 	Save(ctx context.Context, value []models.Metric) error
 	Load(ctx context.Context) ([]models.Metric, error)
@@ -16,7 +17,10 @@ type Store interface {
 	Check() error
 }
 
+// Metrics struct
 type Metrics map[string]models.Metric
+
+// MetricsStorage struct
 type MetricsStorage struct {
 	Metrics
 	Store
@@ -25,6 +29,7 @@ type MetricsStorage struct {
 	Key          *string
 }
 
+// NewStore creates
 func NewStore(settings config.Config) (Store, error) {
 	if settings.Store.DatabaseConnectionString != nil {
 		return NewDatabaseStore(*settings.Store.DatabaseConnectionString)
@@ -37,6 +42,7 @@ func NewStore(settings config.Config) (Store, error) {
 	return NewFileStore("tmp.json"), nil
 }
 
+// NewMetricsStorage creates
 func NewMetricsStorage(settings config.Config) (MetricsStorage, error) {
 	store, err := NewStore(settings)
 	if err != nil {
@@ -70,6 +76,7 @@ func NewMetricsStorage(settings config.Config) (MetricsStorage, error) {
 	return metrics, nil
 }
 
+// Load metrics from storage
 func (m MetricsStorage) Load(ctx context.Context) {
 	if metricsPayload, err := m.Store.Load(ctx); err == nil {
 		for _, payload := range metricsPayload {
@@ -78,6 +85,7 @@ func (m MetricsStorage) Load(ctx context.Context) {
 	}
 }
 
+// Save metrics to storage
 func (m MetricsStorage) Save(ctx context.Context) error {
 	length := len(m.Metrics)
 	if length == 0 {
@@ -92,6 +100,7 @@ func (m MetricsStorage) Save(ctx context.Context) error {
 	return m.Store.Save(ctx, result)
 }
 
+// Check store
 func (m MetricsStorage) Check() error {
 	return m.Store.Check()
 }

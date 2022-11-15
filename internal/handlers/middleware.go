@@ -23,6 +23,7 @@ func (w gzipWriter) Write(b []byte) (int, error) {
 
 const ContentType = "application/json"
 
+// Compress middleware. Compress payload to gzip
 func Compress(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
@@ -48,6 +49,7 @@ func Compress(next http.Handler) http.Handler {
 	})
 }
 
+// Save saves metrics to store
 func Save(metrics store.MetricsStorage) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

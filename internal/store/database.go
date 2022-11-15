@@ -2,32 +2,24 @@ package store
 
 import (
 	"context"
-	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
+
 	"github.com/syols/go-devops/internal/models"
 )
 
+// DatabaseStore struct
 type DatabaseStore struct {
 	dataSourceName string
 	selectQuery    string
 	insertQuery    string
 }
 
-func loadSQL(file string) string {
-	path := filepath.Join("internal", "scripts", file)
-
-	c, err := ioutil.ReadFile(path)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return string(c)
-}
-
+// NewDatabaseStore creates database store
 func NewDatabaseStore(connectionString string) (DatabaseStore, error) {
 	db, err := sqlx.Connect("postgres", connectionString)
 	if err != nil {
@@ -45,6 +37,7 @@ func NewDatabaseStore(connectionString string) (DatabaseStore, error) {
 	}, nil
 }
 
+// Save metrics to database
 func (d DatabaseStore) Save(ctx context.Context, value []models.Metric) error {
 	db, err := sqlx.ConnectContext(ctx, "postgres", d.dataSourceName)
 	if err != nil {
@@ -65,6 +58,7 @@ func (d DatabaseStore) Save(ctx context.Context, value []models.Metric) error {
 	return nil
 }
 
+// Load metrics to database
 func (d DatabaseStore) Load(ctx context.Context) ([]models.Metric, error) {
 	var payload []models.Metric
 	db, err := sqlx.ConnectContext(ctx, "postgres", d.dataSourceName)
@@ -85,6 +79,7 @@ func (d DatabaseStore) Load(ctx context.Context) ([]models.Metric, error) {
 	return payload, nil
 }
 
+// Check metrics in database
 func (d DatabaseStore) Check() error {
 	db, err := sqlx.Connect("postgres", d.dataSourceName)
 	if err == nil {
@@ -99,6 +94,18 @@ func (d DatabaseStore) Check() error {
 	return err
 }
 
+// Type of store
 func (d DatabaseStore) Type() string {
 	return "database"
+}
+
+func loadSQL(file string) string {
+	path := filepath.Join("internal", "scripts", file)
+
+	c, err := os.ReadFile(path)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	return string(c)
 }

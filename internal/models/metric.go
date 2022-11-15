@@ -15,6 +15,7 @@ const CounterName = "counter"
 
 var validate *validator.Validate
 
+// Metric struct
 type Metric struct {
 	Name         string   `json:"id" db:"id" validate:"required"`
 	MetricType   string   `json:"type" db:"metric_type" validate:"metricType,metric"`
@@ -37,6 +38,62 @@ func init() {
 	if err := validate.RegisterValidation("metricCounter", metricCounterValidation); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// String generates string for log metric
+func (p *Metric) String() string {
+	if p.MetricType == GaugeName {
+		return fmt.Sprintf("%s:gauge:%f", p.Name, *p.GaugeValue)
+	}
+	return fmt.Sprintf("%s:counter:%d", p.Name, *p.CounterValue)
+}
+
+// Value get metric value
+func (p *Metric) Value() string {
+	if p.MetricType == GaugeName {
+		return fmt.Sprintf("%.3f", *p.GaugeValue)
+	}
+	return strconv.FormatUint(*p.CounterValue, 10)
+}
+
+// Check validate metric value
+func (p *Metric) Check() error {
+	return validate.Struct(p)
+}
+
+// NewMetric creates new metric from params
+func NewMetric(name, typeName, value string, key *string) Metric {
+	payload := Metric{
+		Name:       name,
+		MetricType: typeName,
+	}
+
+	if payload.MetricType == GaugeName {
+		v, err := strconv.ParseFloat(value, 64)
+		if err == nil {
+			payload.GaugeValue = &v
+		}
+	}
+
+	if payload.MetricType == CounterName {
+		v, err := strconv.ParseUint(value, 10, 64)
+		if err == nil {
+			payload.CounterValue = &v
+		}
+	}
+
+	payload.Hash = payload.CalculateHash(key)
+	return payload
+}
+
+// CalculateHash calculate hash sum from key
+func (p *Metric) CalculateHash(key *string) (result string) {
+	if key != nil {
+		h := hmac.New(sha256.New, []byte(*key))
+		h.Write([]byte(p.String()))
+		result = fmt.Sprintf("%x", h.Sum(nil))
+	}
+	return
 }
 
 func metricGaugeValidation(fl validator.FieldLevel) bool {
@@ -65,55 +122,4 @@ func metricValidation(fl validator.FieldLevel) bool {
 		return metric.CounterValue != nil || metric.GaugeValue != nil
 	}
 	return false
-}
-
-func (p *Metric) String() string {
-	if p.MetricType == GaugeName {
-		return fmt.Sprintf("%s:gauge:%f", p.Name, *p.GaugeValue)
-	}
-	return fmt.Sprintf("%s:counter:%d", p.Name, *p.CounterValue)
-}
-
-func (p *Metric) Value() string {
-	if p.MetricType == GaugeName {
-		return fmt.Sprintf("%.3f", *p.GaugeValue)
-	}
-	return strconv.FormatUint(*p.CounterValue, 10)
-}
-
-func (p *Metric) Check() error {
-	return validate.Struct(p)
-}
-
-func NewMetric(name, typeName, value string, key *string) Metric {
-	payload := Metric{
-		Name:       name,
-		MetricType: typeName,
-	}
-
-	if payload.MetricType == GaugeName {
-		v, err := strconv.ParseFloat(value, 64)
-		if err == nil {
-			payload.GaugeValue = &v
-		}
-	}
-
-	if payload.MetricType == CounterName {
-		v, err := strconv.ParseUint(value, 10, 64)
-		if err == nil {
-			payload.CounterValue = &v
-		}
-	}
-
-	payload.Hash = payload.CalculateHash(key)
-	return payload
-}
-
-func (p *Metric) CalculateHash(key *string) (result string) {
-	if key != nil {
-		h := hmac.New(sha256.New, []byte(*key))
-		h.Write([]byte(p.String()))
-		result = fmt.Sprintf("%x", h.Sum(nil))
-	}
-	return
 }

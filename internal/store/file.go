@@ -10,16 +10,19 @@ import (
 	"github.com/syols/go-devops/internal/models"
 )
 
+// FileStore struct
 type FileStore struct {
 	storeFile string
 }
 
+// NewFileStore creates file store
 func NewFileStore(storeFile string) FileStore {
 	return FileStore{
 		storeFile: storeFile,
 	}
 }
 
+// Save to file store
 func (f FileStore) Save(_ context.Context, value []models.Metric) error {
 	jsonBytes, err := json.Marshal(value)
 	if err != nil {
@@ -49,6 +52,7 @@ func (f FileStore) Save(_ context.Context, value []models.Metric) error {
 	return nil
 }
 
+// Load to file store
 func (f FileStore) Load(_ context.Context) ([]models.Metric, error) {
 	file, err := ioutil.ReadFile(f.storeFile)
 	if err != nil {
@@ -61,11 +65,13 @@ func (f FileStore) Load(_ context.Context) ([]models.Metric, error) {
 	return payload, err
 }
 
+// Check in store
 func (f FileStore) Check() error {
 	_, err := os.Stat(f.storeFile)
 	return err
 }
 
+// Type of store
 func (f FileStore) Type() string {
 	return "file"
 }
