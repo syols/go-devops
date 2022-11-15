@@ -53,8 +53,13 @@ func NewConfig() (settings Config) {
 	if err != nil {
 		return Config{}
 	}
-	settings.setFromOptions(NewEnvironmentVariables().Options()...)
+	settings.LoadFromEnvironment()
 	return settings
+}
+
+// LoadFromEnvironment config struct
+func (s *Config) LoadFromEnvironment() {
+	s.SetFromOptions(NewEnvironmentVariables().Options()...)
 }
 
 // Address create HTTP address
@@ -70,7 +75,7 @@ func (s *Config) String() (result string) {
 	return
 }
 
-func (s *Config) setFromOptions(options ...Option) {
+func (s *Config) SetFromOptions(options ...Option) {
 	for _, fn := range options {
 		fn(s)
 	}

@@ -9,7 +9,7 @@ import (
 	"github.com/syols/go-devops/internal/models"
 )
 
-// Store
+// Store interface
 type Store interface {
 	Save(ctx context.Context, value []models.Metric) error
 	Load(ctx context.Context) ([]models.Metric, error)
@@ -17,10 +17,10 @@ type Store interface {
 	Check() error
 }
 
-// Metrics
+// Metrics struct
 type Metrics map[string]models.Metric
 
-// MetricsStorage
+// MetricsStorage struct
 type MetricsStorage struct {
 	Metrics
 	Store
@@ -76,7 +76,7 @@ func NewMetricsStorage(settings config.Config) (MetricsStorage, error) {
 	return metrics, nil
 }
 
-// Load
+// Load metrics from storage
 func (m MetricsStorage) Load(ctx context.Context) {
 	if metricsPayload, err := m.Store.Load(ctx); err == nil {
 		for _, payload := range metricsPayload {
@@ -85,7 +85,7 @@ func (m MetricsStorage) Load(ctx context.Context) {
 	}
 }
 
-// Save
+// Save metrics to storage
 func (m MetricsStorage) Save(ctx context.Context) error {
 	length := len(m.Metrics)
 	if length == 0 {
@@ -100,7 +100,7 @@ func (m MetricsStorage) Save(ctx context.Context) error {
 	return m.Store.Save(ctx, result)
 }
 
-// Check
+// Check store
 func (m MetricsStorage) Check() error {
 	return m.Store.Check()
 }

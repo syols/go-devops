@@ -2,8 +2,8 @@ package store
 
 import (
 	"context"
-	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 
 	"github.com/jmoiron/sqlx"
@@ -102,7 +102,7 @@ func (d DatabaseStore) Type() string {
 func loadSQL(file string) string {
 	path := filepath.Join("internal", "scripts", file)
 
-	c, err := ioutil.ReadFile(path)
+	c, err := os.ReadFile(path)
 	if err != nil {
 		log.Fatal(err)
 	}

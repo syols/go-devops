@@ -37,15 +37,9 @@ deps:
 test: deps
 	go test -v ./...
 
-coverage: deps
-	gocov test ./... > $(CURDIR)/coverage.out 2>/dev/null
-	gocov report $(CURDIR)/coverage.out
-	if test -z "$$CI"; then \
-	  gocov-html $(CURDIR)/coverage.out > $(CURDIR)/coverage.html; \
-	  if which open &>/dev/null; then \
-	    open $(CURDIR)/coverage.html; \
-	  fi; \
-	fi
+coverage:
+	go test -v -coverpkg=./... -coverprofile=profile.cov ./...
+	go tool cover -func profile.cov
 
 run: server
 
