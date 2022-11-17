@@ -163,3 +163,10 @@ func withDatabase(value string) Option {
 		s.Store.DatabaseConnectionString = &value
 	}
 }
+
+func ReplaceNoneValue(value string) string {
+	if len(value) == 0 {
+		return "N/A"
+	}
+	return value
+}
