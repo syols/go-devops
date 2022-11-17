@@ -7,9 +7,9 @@ import (
 
 // Variable struct
 type Variable struct {
+	value *string
 	env   string
 	name  string
-	value *string
 }
 
 // EnvironmentVariables function of a certain type

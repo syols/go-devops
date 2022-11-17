@@ -58,5 +58,6 @@ func TestLoadStorage(t *testing.T) {
 func TestSaveStorage(t *testing.T) {
 	metrics, ctx, store := newStore(t)
 	store.EXPECT().Save(ctx, metrics).AnyTimes()
-	store.Save(ctx, metrics)
+	err := store.Save(ctx, metrics)
+	assert.NoError(t, err)
 }

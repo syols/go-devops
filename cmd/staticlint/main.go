@@ -49,13 +49,21 @@ import (
 	"golang.org/x/tools/go/analysis/passes/unusedwrite"
 	"golang.org/x/tools/go/analysis/passes/usesgenerics"
 	"honnef.co/go/tools/staticcheck"
+
+	"staticlint/analyzer"
 )
 
+// How to use:
+// cd cmd/staticlint
+// go install staticlint
+// Move to package and call: staticlint ./...
 func main() {
 	checks := []*analysis.Analyzer{
+		// Two or more of any public analyzers of your choice
 		durationcheck.Analyzer,
 		errcheck.Analyzer,
 
+		// Standard static package analyzers
 		ifaceassert.Analyzer,
 		bools.Analyzer,
 		sigchanyzer.Analyzer,
@@ -98,7 +106,10 @@ func main() {
 		buildssa.Analyzer,
 		loopclosure.Analyzer,
 		cgocall.Analyzer,
+		analyzer.Analyzer,
 	}
+	//All analyzers of the SA class of the staticcheck.io package
+	//At least one analyzer of the remaining classes of the staticcheck.io package
 	for _, v := range staticcheck.Analyzers {
 		checks = append(checks, v.Analyzer)
 	}

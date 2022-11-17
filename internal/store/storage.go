@@ -22,11 +22,10 @@ type Metrics map[string]models.Metric
 
 // MetricsStorage struct
 type MetricsStorage struct {
-	Metrics
 	Store
-
-	SaveInterval time.Duration
+	Metrics
 	Key          *string
+	SaveInterval time.Duration
 }
 
 // NewStore creates

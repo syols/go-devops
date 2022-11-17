@@ -45,9 +45,9 @@ func (d DatabaseStore) Save(ctx context.Context, value []models.Metric) error {
 	}
 
 	defer func(db *sqlx.DB) {
-		err := db.Close()
-		if err != nil {
-			log.Fatal(err)
+		closeErr := db.Close()
+		if closeErr != nil {
+			log.Fatal(closeErr)
 		}
 	}(db)
 
@@ -84,9 +84,9 @@ func (d DatabaseStore) Check() error {
 	db, err := sqlx.Connect("postgres", d.dataSourceName)
 	if err == nil {
 		defer func(db *sqlx.DB) {
-			err := db.Close()
-			if err != nil {
-				log.Fatal(err)
+			closeErr := db.Close()
+			if closeErr != nil {
+				log.Fatal(closeErr)
 			}
 		}(db)
 	}

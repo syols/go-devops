@@ -16,14 +16,14 @@ type Option func(s *Config)
 // Config struct
 type Config struct {
 	Server ServerConfig `yaml:"server"`
-	Agent  AgentConfig  `yaml:"agent"`
 	Store  StoreConfig  `yaml:"store"`
+	Agent  AgentConfig  `yaml:"agent"`
 }
 
 // ServerConfig Server config struct
 type ServerConfig struct {
-	Address Address `yaml:"address"`
 	Key     *string `yaml:"key,omitempty"`
+	Address Address `yaml:"address"`
 }
 
 // AgentConfig Agent config struct
