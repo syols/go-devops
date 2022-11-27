@@ -18,19 +18,28 @@ var Analyzer = &analysis.Analyzer{
 func run(pass *analysis.Pass) (interface{}, error) {
 	if pass.Pkg.Name() == "main" {
 		for _, file := range pass.Files {
-			ast.Inspect(file, func(node ast.Node) bool {
-				if funcType, ok := node.(*ast.FuncType); ok {
-					if info, isOk := pass.TypesInfo.Types[funcType]; isOk {
-						if info.Type.String() == "os.Exit" {
-							fmt.Printf("os.Exit in main")
-							return false
-						}
-					}
-				}
-				return true
-			})
+			ast.Inspect(file, inspectFunc(pass))
 		}
 	}
-
 	return nil, nil
+}
+
+func inspectFunc(pass *analysis.Pass) func(node ast.Node) bool {
+	return func(node ast.Node) bool {
+		funcType, isFunc := node.(*ast.FuncType)
+		if !isFunc {
+			return false
+		}
+
+		info, isOk := pass.TypesInfo.Types[funcType]
+		if !isOk {
+			return false
+		}
+
+		if info.Type.String() == "os.Exit" {
+			fmt.Printf("os.Exit in main")
+			return false
+		}
+		return true
+	}
 }
