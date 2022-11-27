@@ -29,7 +29,8 @@ func (f FileStore) Save(_ context.Context, value []models.Metric) error {
 		return err
 	}
 
-	if err := os.Remove(f.storeFile); err != nil {
+	err = os.Remove(f.storeFile)
+	if err != nil {
 		log.Println(err)
 	}
 
@@ -38,12 +39,13 @@ func (f FileStore) Save(_ context.Context, value []models.Metric) error {
 		return err
 	}
 
-	if _, err := file.Write(jsonBytes); err != nil {
+	_, err = file.Write(jsonBytes)
+	if err != nil {
 		return err
 	}
 
 	defer func(file *os.File) {
-		err := file.Close()
+		err = file.Close()
 		if err != nil {
 			log.Fatal(err)
 		}

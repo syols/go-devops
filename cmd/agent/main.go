@@ -18,8 +18,17 @@ import (
 
 // @Contact.email some@mail.com
 
+//Example: go run -ldflags "-X main.buildVersion=%%" main.go
+var buildVersion string
+var buildDate string
+var buildCommit string
+
 func main() {
 	log.SetOutput(os.Stdout)
+	log.Printf("Build version: %s", config.ReplaceNoneValue(buildVersion))
+	log.Printf("Build date: %s", config.ReplaceNoneValue(buildDate))
+	log.Printf("Build commit: %s", config.ReplaceNoneValue(buildCommit))
+
 	settings := config.NewConfig()
 	var wg sync.WaitGroup
 	client := app.NewHTTPClient(settings)

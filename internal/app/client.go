@@ -22,14 +22,14 @@ import (
 
 // Client struct
 type Client struct {
-	Client         http.Client
 	metrics        map[string]float64
-	mutex          sync.RWMutex
-	count          uint64
-	url            string
 	key            *string
+	Client         http.Client
+	url            string
+	count          uint64
 	pollInterval   time.Duration
 	reportInterval time.Duration
+	mutex          sync.RWMutex
 }
 
 // NewHTTPClient creates new HTTP client struct
