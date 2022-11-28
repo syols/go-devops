@@ -2,6 +2,10 @@ package app
 
 import (
 	"context"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -10,15 +14,17 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+
 	"github.com/syols/go-devops/config"
 	"github.com/syols/go-devops/internal/handlers"
 	"github.com/syols/go-devops/internal/store"
 )
 
 type Server struct {
-	server   http.Server
-	metrics  store.MetricsStorage
-	settings config.Config
+	server     http.Server
+	metrics    store.MetricsStorage
+	settings   config.Config
+	privateKey *rsa.PrivateKey
 }
 
 type Handler func(metrics store.MetricsStorage, key *string, w http.ResponseWriter, r *http.Request)
@@ -28,14 +34,30 @@ func NewServer(settings config.Config) (Server, error) {
 	if err != nil {
 		return Server{}, err
 	}
+
+	var privateKey *rsa.PrivateKey
+	if settings.Store.CryptoKeyFilePath != nil {
+		byteArr, err := os.ReadFile(*settings.Store.CryptoKeyFilePath) // just pass the file name
+		if err != nil {
+			fmt.Print(err)
+		}
+
+		blocks, _ := pem.Decode(byteArr)
+		privateKey, err = x509.ParsePKCS1PrivateKey(blocks.Bytes)
+		if err != nil {
+			fmt.Print(err)
+		}
+	}
+
 	return Server{
-		metrics:  metrics,
-		settings: settings,
+		metrics:    metrics,
+		settings:   settings,
+		privateKey: privateKey,
 	}, nil
 }
 
 func (s *Server) Run() {
-	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	defer cancel()
 	s.shutdown(ctx)
 
@@ -62,7 +84,7 @@ func (s *Server) router() *chi.Mux {
 	router.Get("/value/{type}/{name}", handlers.Value(s.metrics))
 	router.Post("/update/{type}/{name}/{value}", handlers.Update(s.metrics))
 	router.Post("/update/", handlers.UpdateJSON(s.metrics, s.settings.Server.Key))
-	router.Post("/updates/", handlers.UpdatesJSON(s.metrics, s.settings.Server.Key))
+	router.Post("/updates/", handlers.UpdatesJSON(s.metrics, s.settings.Server.Key, s.privateKey))
 	router.Post("/value/", handlers.ValueJSON(s.metrics))
 	return router
 }

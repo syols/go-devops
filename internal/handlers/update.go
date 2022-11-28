@@ -1,11 +1,16 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha512"
 	"encoding/json"
+	"io"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
+
 	"github.com/syols/go-devops/internal/models"
 	"github.com/syols/go-devops/internal/store"
 )
@@ -54,16 +59,25 @@ func UpdateJSON(metrics store.MetricsStorage, key *string) http.HandlerFunc {
 	}
 }
 
-func UpdatesJSON(metrics store.MetricsStorage, key *string) http.HandlerFunc {
+func UpdatesJSON(metrics store.MetricsStorage, key *string, privateKey *rsa.PrivateKey) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Type") != ContentType {
 			http.Error(w, "wrong content type", http.StatusUnsupportedMediaType)
 			return
 		}
 
-		decoder := json.NewDecoder(r.Body)
+		buf, err := io.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+
+		buf, err = TryDecrypt(buf, privateKey)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+
 		var payloads []models.Metric
-		if err := decoder.Decode(&payloads); err != nil {
+		if err = json.Unmarshal(buf, &payloads); err != nil {
 			http.Error(w, err.Error(), http.StatusUnprocessableEntity)
 			return
 		}
@@ -113,4 +127,17 @@ func update(w http.ResponseWriter, payload models.Metric, key *string, metrics s
 	payload.Hash = payload.CalculateHash(key)
 	metrics.Metrics[payload.Name] = payload
 	return true
+}
+
+func TryDecrypt(msg []byte, key *rsa.PrivateKey) ([]byte, error) {
+	if key == nil {
+		return msg, nil
+	}
+
+	hash := sha512.New()
+	result, err := rsa.DecryptOAEP(hash, rand.Reader, key, msg, nil)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
 }

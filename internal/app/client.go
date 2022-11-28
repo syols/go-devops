@@ -3,18 +3,25 @@ package app
 import (
 	"bytes"
 	"context"
+	cryprorand "crypto/rand"
+	"crypto/rsa"
+	"crypto/sha512"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
+	"os"
 	"runtime"
 	"sync"
 	"time"
 
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
+
 	"github.com/syols/go-devops/config"
 	"github.com/syols/go-devops/internal/models"
 )
@@ -28,6 +35,7 @@ type Client struct {
 	key            *string
 	pollInterval   time.Duration
 	reportInterval time.Duration
+	publicKey      *rsa.PublicKey
 }
 
 func NewHTTPClient(settings config.Config) Client {
@@ -43,6 +51,19 @@ func NewHTTPClient(settings config.Config) Client {
 		Path:   "/updates/",
 	}
 
+	var publicKey *rsa.PublicKey
+	if settings.Store.CryptoKeyFilePath != nil {
+		byteArr, err := os.ReadFile(*settings.Store.CryptoKeyFilePath) // just pass the file name
+		if err != nil {
+			fmt.Print(err)
+		}
+
+		if blocks, err := pem.Decode(byteArr); err == nil {
+			pubInterface, _ := x509.ParsePKIXPublicKey(blocks.Bytes)
+			publicKey = pubInterface.(*rsa.PublicKey)
+		}
+	}
+
 	return Client{
 		Client:         client,
 		metrics:        map[string]float64{},
@@ -50,6 +71,7 @@ func NewHTTPClient(settings config.Config) Client {
 		key:            settings.Server.Key,
 		pollInterval:   settings.Agent.PollInterval,
 		reportInterval: settings.Agent.ReportInterval,
+		publicKey:      publicKey,
 	}
 }
 
@@ -101,10 +123,11 @@ func (c *Client) SendMetrics(ctx context.Context, wg *sync.WaitGroup) {
 
 func (c *Client) send(metric []models.Metric) error {
 	requestBytes, err := json.Marshal(metric)
+	encryptedBytes := TryEncrypt(requestBytes, c.publicKey)
 	if err != nil {
 		return err
 	}
-	resp, err := http.Post(c.url, "application/json", bytes.NewBuffer(requestBytes))
+	resp, err := http.Post(c.url, "application/json", bytes.NewBuffer(encryptedBytes))
 	if err != nil {
 		return err
 	}
@@ -188,4 +211,17 @@ func (c *Client) CollectAdditionalMetrics(ctx context.Context, wg *sync.WaitGrou
 			return
 		}
 	}
+}
+
+func TryEncrypt(msg []byte, key *rsa.PublicKey) []byte {
+	if key == nil {
+		return msg
+	}
+
+	hash := sha512.New()
+	result, err := rsa.EncryptOAEP(hash, cryprorand.Reader, key, msg, nil)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return result
 }

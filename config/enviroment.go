@@ -24,15 +24,16 @@ func newVariable(env, name string) Variable {
 
 func newVariables() EnvironmentVariables {
 	return EnvironmentVariables{
-		newVariable("ADDRESS", "a"):          withAddress,
-		newVariable("REPORT_INTERVAL", "ri"): withReportInterval,
-		newVariable("POLL_INTERVAL", "p"):    withPollInterval,
-		newVariable("CLIENT_TIMEOUT", "c"):   withClientTimeout,
-		newVariable("STORE_INTERVAL", "i"):   withStoreInterval,
-		newVariable("RESTORE", "r"):          withRestore,
-		newVariable("KEY", "k"):              withKey,
-		newVariable("STORE_FILE", "f"):       withStoreFile,
-		newVariable("DATABASE_DSN", "d"):     withDatabase,
+		newVariable("ADDRESS", "a"):             withAddress,
+		newVariable("REPORT_INTERVAL", "ri"):    withReportInterval,
+		newVariable("POLL_INTERVAL", "p"):       withPollInterval,
+		newVariable("CLIENT_TIMEOUT", "c"):      withClientTimeout,
+		newVariable("STORE_INTERVAL", "i"):      withStoreInterval,
+		newVariable("RESTORE", "r"):             withRestore,
+		newVariable("KEY", "k"):                 withKey,
+		newVariable("STORE_FILE", "f"):          withStoreFile,
+		newVariable("DATABASE_DSN", "d"):        withDatabase,
+		newVariable("CRYPTO_KEY", "crypto-key"): withCryptoKey,
 	}
 }
 
