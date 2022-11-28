@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/http/pprof"
 	"os"
 	"os/signal"
 	"syscall"
@@ -20,6 +21,7 @@ import (
 	"github.com/syols/go-devops/internal/store"
 )
 
+// Server struct
 type Server struct {
 	server     http.Server
 	metrics    store.MetricsStorage
@@ -27,8 +29,7 @@ type Server struct {
 	privateKey *rsa.PrivateKey
 }
 
-type Handler func(metrics store.MetricsStorage, key *string, w http.ResponseWriter, r *http.Request)
-
+// NewServer creates server struct
 func NewServer(settings config.Config) (Server, error) {
 	metrics, err := store.NewMetricsStorage(settings)
 	if err != nil {
@@ -56,6 +57,7 @@ func NewServer(settings config.Config) (Server, error) {
 	}, nil
 }
 
+// Run server
 func (s *Server) Run() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM, syscall.SIGINT, syscall.SIGQUIT)
 	defer cancel()
@@ -76,7 +78,6 @@ func (s *Server) router() *chi.Mux {
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 	router.Use(handlers.Compress)
-	router.Use(handlers.Logging)
 	router.Use(handlers.Save(s.metrics))
 
 	router.Get("/", handlers.Healthcheck)
@@ -86,6 +87,13 @@ func (s *Server) router() *chi.Mux {
 	router.Post("/update/", handlers.UpdateJSON(s.metrics, s.settings.Server.Key))
 	router.Post("/updates/", handlers.UpdatesJSON(s.metrics, s.settings.Server.Key, s.privateKey))
 	router.Post("/value/", handlers.ValueJSON(s.metrics))
+
+	// pprof
+	router.HandleFunc("/debug/pprof/", pprof.Index)
+	router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
+	router.HandleFunc("/debug/pprof/profile", pprof.Profile)
+	router.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
+	router.HandleFunc("/debug/pprof/trace", pprof.Trace)
 	return router
 }
 

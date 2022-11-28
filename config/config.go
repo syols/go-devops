@@ -11,25 +11,30 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Option function of a certain type
 type Option func(s *Config)
 
+// Config struct
 type Config struct {
 	Server ServerConfig `yaml:"server" json:"server"`
 	Agent  AgentConfig  `yaml:"agent" json:"agent"`
 	Store  StoreConfig  `yaml:"store" json:"store"`
 }
 
+// ServerConfig Server config struct
 type ServerConfig struct {
 	Address Address `yaml:"address" json:"address"`
 	Key     *string `yaml:"key,omitempty" json:"key,omitempty"`
 }
 
+// AgentConfig Agent config struct
 type AgentConfig struct {
 	PollInterval   time.Duration `yaml:"poll_interval" json:"poll_interval"`
 	ReportInterval time.Duration `yaml:"report_interval" json:"report_interval"`
 	ClientTimeout  time.Duration `yaml:"client_timeout" json:"client_timeout"`
 }
 
+// StoreConfig Store config struct
 type StoreConfig struct {
 	CryptoKeyFilePath        *string
 	DatabaseConnectionString *string       `yaml:"database,omitempty" json:"database,omitempty"`
@@ -38,21 +43,41 @@ type StoreConfig struct {
 	StoreInterval            time.Duration `yaml:"store_interval" json:"store_interval"`
 }
 
+// Address struct
 type Address struct {
 	Host string `yaml:"host"`
 	Port uint16 `yaml:"port"`
 }
 
+// NewConfig creates config struct
 func NewConfig() (settings Config) {
 	err := settings.setDefault("develop.json")
 	if err != nil {
 		return Config{}
 	}
-	settings.setFromOptions(newVariables().Options()...)
+	settings.LoadFromEnvironment()
 	return settings
 }
 
-func (s *Config) setFromOptions(options ...Option) {
+// LoadFromEnvironment config struct
+func (s *Config) LoadFromEnvironment() {
+	s.SetFromOptions(NewEnvironmentVariables().Options()...)
+}
+
+// Address create HTTP address
+func (s *Config) Address() string {
+	return fmt.Sprintf("%s:%d", s.Server.Address.Host, s.Server.Address.Port)
+}
+
+// String create string from config
+func (s *Config) String() (result string) {
+	if marshal, err := yaml.Marshal(s); err != nil {
+		result = string(marshal)
+	}
+	return
+}
+
+func (s *Config) SetFromOptions(options ...Option) {
 	for _, fn := range options {
 		fn(s)
 	}
@@ -68,17 +93,6 @@ func (s *Config) setDefault(configPath string) error {
 		return err
 	}
 	return nil
-}
-
-func (s *Config) Address() string {
-	return fmt.Sprintf("%s:%d", s.Server.Address.Host, s.Server.Address.Port)
-}
-
-func (s *Config) String() (result string) {
-	if marshal, err := yaml.Marshal(s); err != nil {
-		result = string(marshal)
-	}
-	return
 }
 
 func withAddress(address string) Option {
@@ -156,4 +170,11 @@ func withCryptoKey(value string) Option {
 	return func(s *Config) {
 		s.Store.CryptoKeyFilePath = &value
 	}
+}
+
+func ReplaceNoneValue(value string) string {
+	if len(value) == 0 {
+		return "N/A"
+	}
+	return value
 }

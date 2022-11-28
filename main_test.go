@@ -1,12 +1,14 @@
 package main
 
 import (
-	"github.com/stretchr/testify/require"
-	"github.com/syols/go-devops/config"
-	"github.com/syols/go-devops/internal/app"
 	"net"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/syols/go-devops/config"
+	"github.com/syols/go-devops/internal/app"
 )
 
 func settings(t *testing.T) (config.Config, error) {

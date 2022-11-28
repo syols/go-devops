@@ -6,10 +6,21 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
+
 	"github.com/syols/go-devops/internal/models"
 	"github.com/syols/go-devops/internal/store"
 )
 
+// Value godoc
+// @Tags Value
+// @Summary Request metric
+// @Produce json
+// @Param type path int64 true "Metric type"
+// @Param name path int64 true "Metric name"
+// @Success 200 {object} Metric
+// @Failure 400 {string} string "StatusNotFound"
+// @Failure 403 {string} string "StatusNotImplemented"
+// @Router /value/{type}/{name} [get]
 func Value(metrics store.MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		metricType := chi.URLParam(r, "type")
@@ -33,6 +44,17 @@ func Value(metrics store.MetricsStorage) http.HandlerFunc {
 	}
 }
 
+// ValueJSON godoc
+// @Tags ValueJSON
+// @Summary Get metric
+// @Description Get metric request
+// @Produce json
+// @Param Metric body Metric true "Metric"
+// @Success 200 {object} Metric
+// @Failure 415 {string} string "StatusUnsupportedMediaType"
+// @Failure 422 {string} string "StatusUnprocessableEntity"
+// @Failure 500 {string} string "StatusInternalServerError"
+// @Router /value/ [post]
 func ValueJSON(metrics store.MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Type") != ContentType {

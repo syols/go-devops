@@ -24,8 +24,8 @@ type Mock struct {
 
 type MetricSuite struct {
 	suite.Suite
-	settings config.Config
 	client   http.Client
+	settings config.Config
 }
 
 func (suite *MetricSuite) SetupTest() {

@@ -5,24 +5,18 @@ import (
 	"os"
 )
 
+// Variable struct
 type Variable struct {
+	value *string
 	env   string
 	name  string
-	value *string
 }
 
+// EnvironmentVariables function of a certain type
 type EnvironmentVariables map[Variable]func(string) Option
 
-func newVariable(env, name string) Variable {
-	value := flag.String(name, "", env)
-	return Variable{
-		env:   env,
-		name:  name,
-		value: value,
-	}
-}
-
-func newVariables() EnvironmentVariables {
+// NewEnvironmentVariables creates EnvironmentVariables struct
+func NewEnvironmentVariables() EnvironmentVariables {
 	return EnvironmentVariables{
 		newVariable("ADDRESS", "a"):             withAddress,
 		newVariable("REPORT_INTERVAL", "ri"):    withReportInterval,
@@ -37,6 +31,7 @@ func newVariables() EnvironmentVariables {
 	}
 }
 
+// Options returns []Options  from env
 func (e EnvironmentVariables) Options() (options []Option) {
 	flag.Parse()
 	for k, v := range e {
@@ -51,4 +46,13 @@ func (e EnvironmentVariables) Options() (options []Option) {
 
 	}
 	return
+}
+
+func newVariable(env, name string) Variable {
+	value := flag.String(name, "", env)
+	return Variable{
+		env:   env,
+		name:  name,
+		value: value,
+	}
 }

@@ -23,6 +23,7 @@ func (w gzipWriter) Write(b []byte) (int, error) {
 
 const ContentType = "application/json"
 
+// Compress middleware. Compress payload to gzip
 func Compress(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
@@ -30,7 +31,7 @@ func Compress(next http.Handler) http.Handler {
 			return
 		}
 
-		gz, err := gzip.NewWriterLevel(w, gzip.DefaultCompression)
+		gz, err := gzip.NewWriterLevel(w, gzip.NoCompression)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -48,15 +49,7 @@ func Compress(next http.Handler) http.Handler {
 	})
 }
 
-func Logging(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		uri := r.RequestURI
-		method := r.Method
-		next.ServeHTTP(w, r)
-		log.Printf("%s::%s", uri, method)
-	})
-}
-
+// Save saves metrics to store
 func Save(metrics store.MetricsStorage) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

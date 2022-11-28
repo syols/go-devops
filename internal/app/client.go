@@ -26,18 +26,20 @@ import (
 	"github.com/syols/go-devops/internal/models"
 )
 
+// Client struct
 type Client struct {
-	Client         http.Client
 	metrics        map[string]float64
-	mutex          sync.RWMutex
-	count          uint64
-	url            string
 	key            *string
+	Client         http.Client
+	url            string
+	count          uint64
 	pollInterval   time.Duration
 	reportInterval time.Duration
+	mutex          sync.RWMutex
 	publicKey      *rsa.PublicKey
 }
 
+// NewHTTPClient creates new HTTP client struct
 func NewHTTPClient(settings config.Config) Client {
 	transport := &http.Transport{
 		MaxIdleConns:        40,
@@ -75,6 +77,7 @@ func NewHTTPClient(settings config.Config) Client {
 	}
 }
 
+// SetMetrics set metric to store
 func (c *Client) SetMetrics(metrics map[string]float64) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
@@ -84,6 +87,7 @@ func (c *Client) SetMetrics(metrics map[string]float64) {
 	}
 }
 
+// SendMetrics send metric to HTTP server
 func (c *Client) SendMetrics(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	reportInterval := time.NewTicker(c.reportInterval)
@@ -189,6 +193,7 @@ func (c *Client) CollectMetrics(ctx context.Context, wg *sync.WaitGroup) {
 	}
 }
 
+// CollectAdditionalMetrics collect additional metrics
 func (c *Client) CollectAdditionalMetrics(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	pollInterval := time.NewTicker(c.pollInterval)
