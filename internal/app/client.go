@@ -3,12 +3,18 @@ package app
 import (
 	"bytes"
 	"context"
+	cryprorand "crypto/rand"
+	"crypto/rsa"
+	"crypto/sha512"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
+	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -30,6 +36,7 @@ type Client struct {
 	pollInterval   time.Duration
 	reportInterval time.Duration
 	mutex          sync.RWMutex
+	publicKey      *rsa.PublicKey
 }
 
 // NewHTTPClient creates new HTTP client struct
@@ -46,6 +53,19 @@ func NewHTTPClient(settings config.Config) Client {
 		Path:   "/updates/",
 	}
 
+	var publicKey *rsa.PublicKey
+	if settings.Store.CryptoKeyFilePath != nil {
+		byteArr, err := os.ReadFile(*settings.Store.CryptoKeyFilePath) // just pass the file name
+		if err != nil {
+			fmt.Print(err)
+		}
+
+		if blocks, err := pem.Decode(byteArr); err == nil {
+			pubInterface, _ := x509.ParsePKIXPublicKey(blocks.Bytes)
+			publicKey = pubInterface.(*rsa.PublicKey)
+		}
+	}
+
 	return Client{
 		Client:         client,
 		metrics:        map[string]float64{},
@@ -53,6 +73,7 @@ func NewHTTPClient(settings config.Config) Client {
 		key:            settings.Server.Key,
 		pollInterval:   settings.Agent.PollInterval,
 		reportInterval: settings.Agent.ReportInterval,
+		publicKey:      publicKey,
 	}
 }
 
@@ -104,7 +125,24 @@ func (c *Client) SendMetrics(ctx context.Context, wg *sync.WaitGroup) {
 	}
 }
 
-// CollectMetrics collect metric
+func (c *Client) send(metric []models.Metric) error {
+	requestBytes, err := json.Marshal(metric)
+	encryptedBytes := TryEncrypt(requestBytes, c.publicKey)
+	if err != nil {
+		return err
+	}
+	resp, err := http.Post(c.url, "application/json", bytes.NewBuffer(encryptedBytes))
+	if err != nil {
+		return err
+	}
+
+	err = resp.Body.Close()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (c *Client) CollectMetrics(ctx context.Context, wg *sync.WaitGroup) {
 	defer wg.Done()
 	pollInterval := time.NewTicker(c.pollInterval)
@@ -180,19 +218,15 @@ func (c *Client) CollectAdditionalMetrics(ctx context.Context, wg *sync.WaitGrou
 	}
 }
 
-func (c *Client) send(metric []models.Metric) error {
-	requestBytes, err := json.Marshal(metric)
-	if err != nil {
-		return err
-	}
-	resp, err := http.Post(c.url, "application/json", bytes.NewBuffer(requestBytes))
-	if err != nil {
-		return err
+func TryEncrypt(msg []byte, key *rsa.PublicKey) []byte {
+	if key == nil {
+		return msg
 	}
 
-	err = resp.Body.Close()
+	hash := sha512.New()
+	result, err := rsa.EncryptOAEP(hash, cryprorand.Reader, key, msg, nil)
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
-	return nil
+	return result
 }

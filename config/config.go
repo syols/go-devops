@@ -1,6 +1,7 @@
 package config
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net"
@@ -15,30 +16,31 @@ type Option func(s *Config)
 
 // Config struct
 type Config struct {
-	Server ServerConfig `yaml:"server"`
-	Store  StoreConfig  `yaml:"store"`
-	Agent  AgentConfig  `yaml:"agent"`
+	Server ServerConfig `yaml:"server" json:"server"`
+	Agent  AgentConfig  `yaml:"agent" json:"agent"`
+	Store  StoreConfig  `yaml:"store" json:"store"`
 }
 
 // ServerConfig Server config struct
 type ServerConfig struct {
-	Key     *string `yaml:"key,omitempty"`
-	Address Address `yaml:"address"`
+	Address Address `yaml:"address" json:"address"`
+	Key     *string `yaml:"key,omitempty" json:"key,omitempty"`
 }
 
 // AgentConfig Agent config struct
 type AgentConfig struct {
-	PollInterval   time.Duration `yaml:"poll_interval"`
-	ReportInterval time.Duration `yaml:"report_interval"`
-	ClientTimeout  time.Duration `yaml:"client_timeout"`
+	PollInterval   time.Duration `yaml:"poll_interval" json:"poll_interval"`
+	ReportInterval time.Duration `yaml:"report_interval" json:"report_interval"`
+	ClientTimeout  time.Duration `yaml:"client_timeout" json:"client_timeout"`
 }
 
 // StoreConfig Store config struct
 type StoreConfig struct {
-	DatabaseConnectionString *string       `yaml:"database,omitempty"`
-	StoreFile                *string       `yaml:"store_file,omitempty"`
-	Restore                  bool          `yaml:"restore"`
-	StoreInterval            time.Duration `yaml:"store_interval"`
+	CryptoKeyFilePath        *string
+	DatabaseConnectionString *string       `yaml:"database,omitempty" json:"database,omitempty"`
+	StoreFile                *string       `yaml:"store_file,omitempty" json:"store_file,omitempty"`
+	Restore                  bool          `yaml:"restore" json:"restore"`
+	StoreInterval            time.Duration `yaml:"store_interval" json:"store_interval"`
 }
 
 // Address struct
@@ -49,7 +51,7 @@ type Address struct {
 
 // NewConfig creates config struct
 func NewConfig() (settings Config) {
-	err := settings.setDefault("develop.yml")
+	err := settings.setDefault("develop.json")
 	if err != nil {
 		return Config{}
 	}
@@ -87,7 +89,7 @@ func (s *Config) setDefault(configPath string) error {
 		return err
 	}
 
-	if err := yaml.Unmarshal(file, s); err != nil {
+	if err := json.Unmarshal(file, s); err != nil {
 		return err
 	}
 	return nil
@@ -161,6 +163,12 @@ func withKey(value string) Option {
 func withDatabase(value string) Option {
 	return func(s *Config) {
 		s.Store.DatabaseConnectionString = &value
+	}
+}
+
+func withCryptoKey(value string) Option {
+	return func(s *Config) {
+		s.Store.CryptoKeyFilePath = &value
 	}
 }
 

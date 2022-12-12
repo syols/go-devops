@@ -55,7 +55,7 @@ store:
 
 func TestDefaultConfig(t *testing.T) {
 	config := Config{}
-	err := config.setDefault("../develop.yml")
+	err := config.setDefault("../develop.json")
 	assert.NoError(t, err)
 }
 

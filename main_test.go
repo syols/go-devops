@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+
 	"github.com/syols/go-devops/config"
 	"github.com/syols/go-devops/internal/app"
 )
