@@ -104,7 +104,7 @@ func UpdatesJSON(metrics store.MetricsStorage, key *string, privateKey *rsa.Priv
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 
-		buf, err = TryDecrypt(buf, privateKey)
+		buf, err = tryDecrypt(buf, privateKey)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
@@ -162,7 +162,7 @@ func update(w http.ResponseWriter, payload models.Metric, key *string, metrics s
 	return true
 }
 
-func TryDecrypt(msg []byte, key *rsa.PrivateKey) ([]byte, error) {
+func tryDecrypt(msg []byte, key *rsa.PrivateKey) ([]byte, error) {
 	if key == nil {
 		return msg, nil
 	}

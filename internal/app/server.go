@@ -44,6 +44,10 @@ func NewServer(settings config.Config) (Server, error) {
 		}
 
 		blocks, _ := pem.Decode(byteArr)
+		if blocks != nil {
+			log.Fatal("Error at decode")
+		}
+
 		privateKey, err = x509.ParsePKCS1PrivateKey(blocks.Bytes)
 		if err != nil {
 			fmt.Print(err)
