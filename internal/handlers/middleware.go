@@ -5,6 +5,7 @@ import (
 	"context"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -64,6 +65,32 @@ func Save(metrics store.MetricsStorage) func(http.Handler) http.Handler {
 					return
 				}
 			}
+		})
+	}
+}
+
+// CheckSubnet check trusted subnet
+func CheckSubnet(trustedSubnet *string) func(http.Handler) http.Handler {
+	_, trustedNetwork, err := net.ParseCIDR(*trustedSubnet)
+
+	if err != nil {
+		return func(next http.Handler) http.Handler {
+			return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				http.Error(w, "Trusted subnet contains incorrect data", http.StatusInternalServerError)
+				return
+			})
+		}
+	}
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			agentIP := r.Header.Get("X-Real-IP")
+			ip := net.ParseIP(agentIP)
+			if !trustedNetwork.Contains(ip) {
+				http.Error(w, "No trusted subnet is specified", http.StatusForbidden)
+				return
+			}
+			next.ServeHTTP(w, r)
 		})
 	}
 }

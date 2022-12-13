@@ -28,6 +28,7 @@ func NewEnvironmentVariables() EnvironmentVariables {
 		newVariable("STORE_FILE", "f"):          withStoreFile,
 		newVariable("DATABASE_DSN", "d"):        withDatabase,
 		newVariable("CRYPTO_KEY", "crypto-key"): withCryptoKey,
+		newVariable("TRUSTED_SUBNET", "t"):      withTrustedSubnet,
 	}
 }
 

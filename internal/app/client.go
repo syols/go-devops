@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -131,13 +132,21 @@ func (c *Client) send(metric []models.Metric) error {
 	if err != nil {
 		return err
 	}
-	resp, err := http.Post(c.url, "application/json", bytes.NewBuffer(encryptedBytes))
+
+	req, err := http.NewRequest("POST", c.url, bytes.NewBuffer(encryptedBytes))
+	if err != nil {
+		return err
+
+	}
+
+	realIp, _, err := net.SplitHostPort(req.Host)
 	if err != nil {
 		return err
 	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-Real-IP", realIp)
 
-	err = resp.Body.Close()
-	if err != nil {
+	if _, err = c.Client.Do(req); err != nil {
 		return err
 	}
 	return nil

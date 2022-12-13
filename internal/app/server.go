@@ -82,6 +82,9 @@ func (s *Server) router() *chi.Mux {
 	router.Use(middleware.Logger)
 	router.Use(middleware.Recoverer)
 	router.Use(handlers.Compress)
+	if s.settings.Server.TrustedSubnet != nil {
+		router.Use(handlers.CheckSubnet(s.settings.Server.TrustedSubnet))
+	}
 	router.Use(handlers.Save(s.metrics))
 
 	router.Get("/", handlers.Healthcheck)

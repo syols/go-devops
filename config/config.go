@@ -23,8 +23,9 @@ type Config struct {
 
 // ServerConfig Server config struct
 type ServerConfig struct {
-	Address Address `yaml:"address" json:"address"`
-	Key     *string `yaml:"key,omitempty" json:"key,omitempty"`
+	Address       Address `yaml:"address" json:"address"`
+	Key           *string `yaml:"key,omitempty" json:"key,omitempty"`
+	TrustedSubnet *string `yaml:"trusted_subnet,omitempty" json:"trusted_subnet,omitempty"`
 }
 
 // AgentConfig Agent config struct
@@ -103,6 +104,12 @@ func withAddress(address string) Option {
 				s.Server.Address.Port = uint16(port)
 			}
 		}
+	}
+}
+
+func withTrustedSubnet(value string) Option {
+	return func(s *Config) {
+		s.Server.TrustedSubnet = &value
 	}
 }
 
