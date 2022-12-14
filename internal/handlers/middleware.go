@@ -51,7 +51,7 @@ func Compress(next http.Handler) http.Handler {
 }
 
 // Save saves metrics to store
-func Save(metrics store.MetricsStorage) func(http.Handler) http.Handler {
+func Save(metrics *store.MetricsStorage) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()

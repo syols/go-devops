@@ -26,7 +26,7 @@ import (
 // @Success 200 {object} Metric
 // @Failure 500 {string} string "StatusInternalServerError"
 // @Router /update/{type}/{name}/{value} [post]
-func Update(metrics store.MetricsStorage) http.HandlerFunc {
+func Update(metrics *store.MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		metricType := chi.URLParam(r, "type")
 		metricValue := chi.URLParam(r, "value")
@@ -56,7 +56,7 @@ func Update(metrics store.MetricsStorage) http.HandlerFunc {
 // @Failure 422 {string} string "StatusUnprocessableEntity"
 // @Failure 500 {string} string "StatusInternalServerError"
 // @Router /update/ [post]
-func UpdateJSON(metrics store.MetricsStorage, key *string) http.HandlerFunc {
+func UpdateJSON(metrics *store.MetricsStorage, key *string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Type") != ContentType {
 			http.Error(w, "wrong content type", http.StatusUnsupportedMediaType)
@@ -92,7 +92,7 @@ func UpdateJSON(metrics store.MetricsStorage, key *string) http.HandlerFunc {
 // @Failure 422 {string} string "StatusUnprocessableEntity"
 // @Failure 500 {string} string "StatusInternalServerError"
 // @Router /updates/ [post]
-func UpdatesJSON(metrics store.MetricsStorage, key *string, privateKey *rsa.PrivateKey) http.HandlerFunc {
+func UpdatesJSON(metrics *store.MetricsStorage, key *string, privateKey *rsa.PrivateKey) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Type") != ContentType {
 			http.Error(w, "wrong content type", http.StatusUnsupportedMediaType)
@@ -129,7 +129,7 @@ func UpdatesJSON(metrics store.MetricsStorage, key *string, privateKey *rsa.Priv
 	}
 }
 
-func update(w http.ResponseWriter, payload models.Metric, key *string, metrics store.MetricsStorage) bool {
+func update(w http.ResponseWriter, payload models.Metric, key *string, metrics *store.MetricsStorage) bool {
 	err := payload.Check()
 	if err, ok := err.(validator.ValidationErrors); ok {
 		if err[0].Tag() == "metric" {
@@ -146,7 +146,8 @@ func update(w http.ResponseWriter, payload models.Metric, key *string, metrics s
 		return false
 	}
 
-	oldPayload, isOk := metrics.Metrics[payload.Name]
+	value, isOk := metrics.Metrics.Load(payload.Name)
+	oldPayload := value.(models.Metric)
 	if isOk {
 		if payload.MetricType != oldPayload.MetricType {
 			http.Error(w, "wrong type name", http.StatusNotImplemented)
@@ -158,7 +159,7 @@ func update(w http.ResponseWriter, payload models.Metric, key *string, metrics s
 	}
 
 	payload.Hash = payload.CalculateHash(key)
-	metrics.Metrics[payload.Name] = payload
+	metrics.Metrics.Store(payload.Name, payload)
 	return true
 }
 

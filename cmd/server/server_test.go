@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/suite"
+
 	"github.com/syols/go-devops/config"
 	"github.com/syols/go-devops/internal/app"
 	"github.com/syols/go-devops/internal/models"
@@ -170,7 +171,7 @@ func (suite *MetricSuite) TestUpdateCounterJSON() {
 func (suite *MetricSuite) check(mock Mock) {
 	uri := url.URL{
 		Scheme: "http",
-		Host:   suite.settings.Address(),
+		Host:   suite.settings.Server.Address.String(),
 		Path:   mock.route,
 	}
 

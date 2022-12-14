@@ -17,5 +17,11 @@
     "store_file": "/tmp/devops-metrics-db.json",
     "restore": true,
     "store_interval": 300000000000
+  },
+  "grpc": {
+    "address": {
+      "host": "0.0.0.0",
+      "port": 3020
+    }
   }
 }

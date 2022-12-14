@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"github.com/golang/mock/gomock"
@@ -35,7 +36,7 @@ func TestNewStorage(t *testing.T) {
 	model := models.Metric{
 		Name: "41",
 	}
-	storage.Metrics["some"] = model
+	storage.Metrics.Store("some", model)
 	storage.Load(ctx)
 	assert.NoError(t, storage.Save(ctx))
 	assert.NoError(t, err)
@@ -49,7 +50,7 @@ func TestLoadStorage(t *testing.T) {
 	store := mock_store.NewMockStore(ctrl)
 	store.EXPECT().Load(ctx).AnyTimes()
 	metrics := MetricsStorage{
-		Metrics: make(Metrics),
+		Metrics: sync.Map{},
 		Store:   store,
 	}
 	metrics.Load(ctx)

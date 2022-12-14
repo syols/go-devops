@@ -18,7 +18,7 @@ type EnvironmentVariables map[Variable]func(string) Option
 // NewEnvironmentVariables creates EnvironmentVariables struct
 func NewEnvironmentVariables() EnvironmentVariables {
 	return EnvironmentVariables{
-		newVariable("ADDRESS", "a"):             withAddress,
+		newVariable("ADDRESS", "a"):             withHttpAddress,
 		newVariable("REPORT_INTERVAL", "ri"):    withReportInterval,
 		newVariable("POLL_INTERVAL", "p"):       withPollInterval,
 		newVariable("CLIENT_TIMEOUT", "c"):      withClientTimeout,
@@ -29,6 +29,7 @@ func NewEnvironmentVariables() EnvironmentVariables {
 		newVariable("DATABASE_DSN", "d"):        withDatabase,
 		newVariable("CRYPTO_KEY", "crypto-key"): withCryptoKey,
 		newVariable("TRUSTED_SUBNET", "t"):      withTrustedSubnet,
+		newVariable("GRPC_PORT", "grpc-port"):   withGrpcAddress,
 	}
 }
 

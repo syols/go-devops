@@ -3,6 +3,7 @@ package store
 import (
 	"context"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/syols/go-devops/config"
@@ -17,13 +18,10 @@ type Store interface {
 	Check() error
 }
 
-// Metrics struct
-type Metrics map[string]models.Metric
-
 // MetricsStorage struct
 type MetricsStorage struct {
 	Store
-	Metrics
+	Metrics      sync.Map
 	Key          *string
 	SaveInterval time.Duration
 }
@@ -49,7 +47,7 @@ func NewMetricsStorage(settings config.Config) (MetricsStorage, error) {
 	}
 
 	metrics := MetricsStorage{
-		Metrics:      make(Metrics),
+		Metrics:      sync.Map{},
 		Store:        store,
 		SaveInterval: settings.Store.StoreInterval,
 		Key:          settings.Server.Key,
@@ -76,30 +74,30 @@ func NewMetricsStorage(settings config.Config) (MetricsStorage, error) {
 }
 
 // Load metrics from storage
-func (m MetricsStorage) Load(ctx context.Context) {
+func (m *MetricsStorage) Load(ctx context.Context) {
 	if metricsPayload, err := m.Store.Load(ctx); err == nil {
 		for _, payload := range metricsPayload {
-			m.Metrics[payload.Name] = payload
+			m.Metrics.Store(payload.Name, payload)
 		}
 	}
 }
 
 // Save metrics to storage
-func (m MetricsStorage) Save(ctx context.Context) error {
-	length := len(m.Metrics)
-	if length == 0 {
-		return nil
-	}
-
+func (m *MetricsStorage) Save(ctx context.Context) error {
 	var result []models.Metric
-	for _, v := range m.Metrics {
-		result = append(result, v)
+	m.Metrics.Range(func(key, value interface{}) bool {
+		result = append(result, value.(models.Metric))
+		return true
+	})
+
+	if len(result) == 0 {
+		return nil
 	}
 
 	return m.Store.Save(ctx, result)
 }
 
 // Check store
-func (m MetricsStorage) Check() error {
+func (m *MetricsStorage) Check() error {
 	return m.Store.Check()
 }

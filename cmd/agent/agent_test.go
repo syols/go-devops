@@ -60,7 +60,7 @@ func handlers(t *testing.T) http.Handler {
 
 func TestAgent(t *testing.T) {
 	settings := mockSettings(t)
-	listener, err := net.Listen("tcp", settings.Address())
+	listener, err := net.Listen("tcp", settings.Server.Address.String())
 	assert.NoError(t, err)
 
 	server := httptest.NewUnstartedServer(handlers(t))
@@ -72,7 +72,7 @@ func TestAgent(t *testing.T) {
 	defer server.Close()
 
 	var wg sync.WaitGroup
-	client := app.NewHTTPClient(settings)
+	client := app.NewClient(settings)
 	wg.Add(3)
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	go client.CollectAdditionalMetrics(ctx, &wg)
