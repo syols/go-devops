@@ -103,14 +103,14 @@ func (s *Config) setDefault(configPath string) error {
 	return nil
 }
 
-func withHttpAddress(address string) Option {
+func withHTTPAddress(address string) Option {
 	return func(s *Config) {
 		host, port, err := net.SplitHostPort(address)
 		if err != nil {
 			log.Fatal(err.Error())
 		}
 
-		value, err := strconv.ParseUint(port, 0, 16);
+		value, err := strconv.ParseUint(port, 0, 16)
 		if err != nil {
 			log.Fatal(err.Error())
 		}
@@ -127,7 +127,7 @@ func withGrpcAddress(address string) Option {
 			log.Fatal(err.Error())
 		}
 
-		value, err := strconv.ParseUint(port, 0, 16);
+		value, err := strconv.ParseUint(port, 0, 16)
 		if err != nil {
 			log.Fatal(err.Error())
 		}
