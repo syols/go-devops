@@ -93,12 +93,12 @@ func (s *Server) Run() {
 	}
 
 	wg.Add(1)
-	go s.runHttpServer()
+	go s.runHTTPServer()
 	wg.Wait()
 }
 
-func (s *Server) runHttpServer() {
-	log.Println("runHttpServer")
+func (s *Server) runHTTPServer() {
+	log.Println("runHTTPServer")
 	if err := s.httpServer.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}

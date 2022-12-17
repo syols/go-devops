@@ -46,8 +46,8 @@ type Client struct {
 	mutex          sync.RWMutex
 }
 
-// HttpTransport struct
-type HttpTransport struct {
+// HTTPTransport struct
+type HTTPTransport struct {
 	url       string
 	http      http.Client
 	publicKey *rsa.PublicKey
@@ -58,7 +58,7 @@ type GrpcTransport struct {
 	grpc pb.GoDevopsClient
 }
 
-func NewHttpTransport(settings config.Config) HttpTransport {
+func NewHTTPTransport(settings config.Config) HTTPTransport {
 	transport := &http.Transport{
 		MaxIdleConns:        40,
 		MaxIdleConnsPerHost: 40,
@@ -84,7 +84,7 @@ func NewHttpTransport(settings config.Config) HttpTransport {
 		}
 	}
 
-	return HttpTransport{
+	return HTTPTransport{
 		url:       uri.String(),
 		http:      httpClient,
 		publicKey: publicKey,
@@ -108,7 +108,7 @@ func NewTransport(settings config.Config) Transport {
 		return NewGrpcTransport(settings)
 	}
 
-	return NewHttpTransport(settings)
+	return NewHTTPTransport(settings)
 }
 
 // NewClient creates new HTTP client struct
@@ -169,7 +169,7 @@ func (c *Client) SendMetrics(ctx context.Context, wg *sync.WaitGroup) {
 	}
 }
 
-func (h HttpTransport) send(metric []models.Metric) error {
+func (h HTTPTransport) send(metric []models.Metric) error {
 	requestBytes, err := json.Marshal(metric)
 	encryptedBytes := TryEncrypt(requestBytes, h.publicKey)
 	if err != nil {
@@ -181,14 +181,20 @@ func (h HttpTransport) send(metric []models.Metric) error {
 		return err
 	}
 
-	realIp, _, err := net.SplitHostPort(req.Host)
+	realIP, _, err := net.SplitHostPort(req.Host)
 	if err != nil {
 		return err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Real-IP", realIp)
+	req.Header.Set("X-Real-IP", realIP)
 
-	if _, err = h.http.Do(req); err != nil {
+	resp, err := h.http.Do(req)
+	if err != nil {
+		return err
+	}
+
+	err = resp.Body.Close()
+	if err != nil {
 		return err
 	}
 	return nil
