@@ -89,7 +89,7 @@ func ValueJSON(metrics *store.MetricsStorage) http.HandlerFunc {
 
 		metric.Hash = metric.CalculateHash(metrics.Key)
 		encoder := json.NewEncoder(w)
-		if err := encoder.Encode(value); err != nil {
+		if err := encoder.Encode(metric); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}
