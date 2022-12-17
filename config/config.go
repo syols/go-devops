@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"strconv"
 	"time"
@@ -19,12 +20,14 @@ type Config struct {
 	Server ServerConfig `yaml:"server" json:"server"`
 	Agent  AgentConfig  `yaml:"agent" json:"agent"`
 	Store  StoreConfig  `yaml:"store" json:"store"`
+	Grpc   *GrpcConfig  `yaml:"grpc,omitempty" json:"grpc,omitempty"`
 }
 
 // ServerConfig Server config struct
 type ServerConfig struct {
-	Address Address `yaml:"address" json:"address"`
-	Key     *string `yaml:"key,omitempty" json:"key,omitempty"`
+	Address       Address `yaml:"address" json:"address"`
+	Key           *string `yaml:"key,omitempty" json:"key,omitempty"`
+	TrustedSubnet *string `yaml:"trusted_subnet,omitempty" json:"trusted_subnet,omitempty"`
 }
 
 // AgentConfig Agent config struct
@@ -41,6 +44,11 @@ type StoreConfig struct {
 	StoreFile                *string       `yaml:"store_file,omitempty" json:"store_file,omitempty"`
 	Restore                  bool          `yaml:"restore" json:"restore"`
 	StoreInterval            time.Duration `yaml:"store_interval" json:"store_interval"`
+}
+
+// GrpcConfig Store Grpc config
+type GrpcConfig struct {
+	Address Address `yaml:"address" json:"address"`
 }
 
 // Address struct
@@ -65,8 +73,8 @@ func (s *Config) LoadFromEnvironment() {
 }
 
 // Address create HTTP address
-func (s *Config) Address() string {
-	return fmt.Sprintf("%s:%d", s.Server.Address.Host, s.Server.Address.Port)
+func (a *Address) String() string {
+	return fmt.Sprintf("%s:%d", a.Host, a.Port)
 }
 
 // String create string from config
@@ -95,14 +103,47 @@ func (s *Config) setDefault(configPath string) error {
 	return nil
 }
 
-func withAddress(address string) Option {
+func withHTTPAddress(address string) Option {
 	return func(s *Config) {
-		if host, port, err := net.SplitHostPort(address); err == nil {
-			if port, err := strconv.ParseUint(port, 0, 16); err == nil {
-				s.Server.Address.Host = host
-				s.Server.Address.Port = uint16(port)
-			}
+		host, port, err := net.SplitHostPort(address)
+		if err != nil {
+			log.Fatal(err.Error())
 		}
+
+		value, err := strconv.ParseUint(port, 0, 16)
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+
+		s.Server.Address.Host = host
+		s.Server.Address.Port = uint16(value)
+	}
+}
+
+func withGrpcAddress(address string) Option {
+	return func(s *Config) {
+		host, port, err := net.SplitHostPort(address)
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+
+		value, err := strconv.ParseUint(port, 0, 16)
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+
+		s.Grpc = &GrpcConfig{
+			Address: Address{
+				Host: host,
+				Port: uint16(value),
+			},
+		}
+	}
+}
+
+func withTrustedSubnet(value string) Option {
+	return func(s *Config) {
+		s.Server.TrustedSubnet = &value
 	}
 }
 

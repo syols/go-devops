@@ -1,0 +1,27 @@
+{
+  "server": {
+    "address": {
+      "host": "0.0.0.0",
+      "port": 8080
+    },
+    "key": null,
+    "trusted_subnet": "0.0.0.0/24"
+  },
+  "agent": {
+    "poll_interval": 2000000000,
+    "report_interval": 3000000000,
+    "client_timeout": 1000000000
+  },
+  "store": {
+    "database": null,
+    "store_file": "/tmp/devops-metrics-db.json",
+    "restore": true,
+    "store_interval": 300000000000
+  },
+  "grpc": {
+    "address": {
+      "host": "0.0.0.0",
+      "port": 3020
+    }
+  }
+}

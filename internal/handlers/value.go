@@ -21,25 +21,24 @@ import (
 // @Failure 400 {string} string "StatusNotFound"
 // @Failure 403 {string} string "StatusNotImplemented"
 // @Router /value/{type}/{name} [get]
-func Value(metrics store.MetricsStorage) http.HandlerFunc {
+func Value(metrics *store.MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		metricType := chi.URLParam(r, "type")
 		metricName := chi.URLParam(r, "name")
 
-		value, isOk := metrics.Metrics[metricName]
+		value, isOk := metrics.Metrics.Load(metricName)
 		if !isOk {
 			http.Error(w, "value not found", http.StatusNotFound)
 			return
 		}
-
-		if value.MetricType != metricType {
+		metric := value.(models.Metric)
+		if metric.MetricType != metricType {
 			http.Error(w, "wrong type name", http.StatusNotImplemented)
 			return
 		}
 
-		if _, err := w.Write([]byte(value.Value())); err != nil {
+		if _, err := w.Write([]byte(metric.Value())); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
 		}
 	}
 }
@@ -55,7 +54,7 @@ func Value(metrics store.MetricsStorage) http.HandlerFunc {
 // @Failure 422 {string} string "StatusUnprocessableEntity"
 // @Failure 500 {string} string "StatusInternalServerError"
 // @Router /value/ [post]
-func ValueJSON(metrics store.MetricsStorage) http.HandlerFunc {
+func ValueJSON(metrics *store.MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Type") != ContentType {
 			http.Error(w, "wrong content type", http.StatusUnsupportedMediaType)
@@ -76,23 +75,22 @@ func ValueJSON(metrics store.MetricsStorage) http.HandlerFunc {
 				return
 			}
 		}
-
-		value, isOk := metrics.Metrics[payload.Name]
+		value, isOk := metrics.Metrics.Load(payload.Name)
 		if !isOk {
 			http.Error(w, "value not found", http.StatusNotFound)
 			return
 		}
 
-		if value.MetricType != payload.MetricType {
+		metric := value.(models.Metric)
+		if metric.MetricType != payload.MetricType {
 			http.Error(w, "wrong type name", http.StatusNotImplemented)
 			return
 		}
 
-		value.Hash = value.CalculateHash(metrics.Key)
+		metric.Hash = metric.CalculateHash(metrics.Key)
 		encoder := json.NewEncoder(w)
-		if err := encoder.Encode(value); err != nil {
+		if err := encoder.Encode(metric); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
 		}
 	}
 }

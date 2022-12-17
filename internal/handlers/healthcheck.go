@@ -21,7 +21,7 @@ func Healthcheck(w http.ResponseWriter, _ *http.Request) {
 // @Summary Ping
 // @Success 200 {object} OK
 // @Router /ping [get]
-func Ping(metrics store.MetricsStorage) http.HandlerFunc {
+func Ping(metrics *store.MetricsStorage) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
 		if err := metrics.Check(); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

@@ -31,7 +31,7 @@ func main() {
 
 	settings := config.NewConfig()
 	var wg sync.WaitGroup
-	client := app.NewHTTPClient(settings)
+	client := app.NewClient(settings)
 	ctx, _ := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 
 	wg.Add(3)

@@ -24,7 +24,7 @@ func TestSetMetrics(t *testing.T) {
 	cfg := config.Config{}
 	cfg.LoadFromEnvironment()
 
-	client := NewHTTPClient(cfg)
+	client := NewClient(cfg)
 	client.SetMetrics(map[string]float64{"some": 41})
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(time.Millisecond*100))
 	defer cancel()

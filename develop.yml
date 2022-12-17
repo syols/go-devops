@@ -16,3 +16,8 @@ store:
   store_file: "/tmp/devops-metrics-db.json"
   restore: true
   store_interval: 5m0s
+
+grpc:
+  address:
+    host: 0.0.0.0
+    port: 3200
