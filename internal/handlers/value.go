@@ -77,12 +77,12 @@ func ValueJSON(metrics *store.MetricsStorage) http.HandlerFunc {
 			}
 		}
 		value, isOk := metrics.Metrics.Load(payload.Name)
-		metric := value.(models.Metric)
 		if !isOk {
 			http.Error(w, "value not found", http.StatusNotFound)
 			return
 		}
 
+		metric := value.(models.Metric)
 		if metric.MetricType != payload.MetricType {
 			http.Error(w, "wrong type name", http.StatusNotImplemented)
 			return

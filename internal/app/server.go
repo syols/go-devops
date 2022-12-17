@@ -195,8 +195,8 @@ func (s *Server) UpdateMetric(ctx context.Context, in *pb.MetricMessage) (*pb.Up
 	}
 
 	loadedValue, isOk := s.metrics.Metrics.Load(metric.Name)
-	oldPayload := loadedValue.(models.Metric)
 	if isOk {
+		oldPayload := loadedValue.(models.Metric)
 		if metric.MetricType != oldPayload.MetricType {
 			return &response, nil
 		}

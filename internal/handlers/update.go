@@ -147,8 +147,8 @@ func update(w http.ResponseWriter, payload models.Metric, key *string, metrics *
 	}
 
 	value, isOk := metrics.Metrics.Load(payload.Name)
-	oldPayload := value.(models.Metric)
 	if isOk {
+		oldPayload := value.(models.Metric)
 		if payload.MetricType != oldPayload.MetricType {
 			http.Error(w, "wrong type name", http.StatusNotImplemented)
 			return false

@@ -32,7 +32,7 @@ func TestEnvironment(t *testing.T) {
 	config := Config{}
 	options := NewEnvironmentVariables().Options()
 	config.SetFromOptions(options...)
-	assert.Equal(t, address, config.Address())
+	assert.Equal(t, address, config.Server.Address.String())
 	assert.Equal(t, duration, config.Agent.ReportInterval)
 	assert.Equal(t, duration, config.Agent.PollInterval)
 	assert.Equal(t, duration, config.Agent.ClientTimeout)
