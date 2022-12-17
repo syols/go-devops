@@ -171,7 +171,7 @@ func (c *Client) SendMetrics(ctx context.Context, wg *sync.WaitGroup) {
 
 func (h HTTPTransport) send(metric []models.Metric) error {
 	requestBytes, err := json.Marshal(metric)
-	encryptedBytes := TryEncrypt(requestBytes, h.publicKey)
+	encryptedBytes := tryEncrypt(requestBytes, h.publicKey)
 	if err != nil {
 		return err
 	}
@@ -302,7 +302,7 @@ func (c *Client) CollectAdditionalMetrics(ctx context.Context, wg *sync.WaitGrou
 	}
 }
 
-func TryEncrypt(msg []byte, key *rsa.PublicKey) []byte {
+func tryEncrypt(msg []byte, key *rsa.PublicKey) []byte {
 	if key == nil {
 		return msg
 	}
