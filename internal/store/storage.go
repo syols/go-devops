@@ -40,10 +40,10 @@ func NewStore(settings config.Config) (Store, error) {
 }
 
 // NewMetricsStorage creates
-func NewMetricsStorage(settings config.Config) (MetricsStorage, error) {
+func NewMetricsStorage(settings config.Config) (*MetricsStorage, error) {
 	store, err := NewStore(settings)
 	if err != nil {
-		return MetricsStorage{}, err
+		return &MetricsStorage{}, err
 	}
 
 	metrics := MetricsStorage{
@@ -70,7 +70,7 @@ func NewMetricsStorage(settings config.Config) (MetricsStorage, error) {
 			}
 		}()
 	}
-	return metrics, nil
+	return &metrics, nil
 }
 
 // Load metrics from storage

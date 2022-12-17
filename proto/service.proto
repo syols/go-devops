@@ -6,14 +6,14 @@ option go_package = "internal/rpc/proto";
 
 message MetricMessage {
   string name = 1;
-  string type = 2;
-  optional uint64 counter = 3;
-  optional double gauge = 4;
+  oneof value {
+    uint64 counter = 3;
+    double gauge = 4;
+  }
 }
 
 message UpdateMetricResponse {
   MetricMessage metric = 1;
-  string error = 2;
 }
 
 service GoDevops {

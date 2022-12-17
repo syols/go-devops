@@ -98,13 +98,6 @@ func NewGrpcTransport(settings config.Config) GrpcTransport {
 		log.Fatal(err)
 	}
 
-	defer func(conn *grpc.ClientConn) {
-		err := conn.Close()
-		if err != nil {
-			log.Fatal(err.Error())
-		}
-	}(conn)
-
 	return GrpcTransport{
 		grpc: pb.NewGoDevopsClient(conn),
 	}
@@ -204,10 +197,21 @@ func (h HttpTransport) send(metric []models.Metric) error {
 func (g GrpcTransport) send(metrics []models.Metric) error {
 	for _, metric := range metrics {
 		message := pb.MetricMessage{
-			Name:    metric.Name,
-			Type:    metric.MetricType,
-			Counter: metric.CounterValue,
-			Gauge:   metric.GaugeValue,
+			Name: metric.Name,
+		}
+
+		if metric.MetricType == models.CounterName {
+			counter := pb.MetricMessage_Counter{
+				Counter: *metric.CounterValue,
+			}
+			message.Value = &counter
+		}
+
+		if metric.MetricType == models.GaugeName {
+			gauge := pb.MetricMessage_Gauge{
+				Gauge: *metric.GaugeValue,
+			}
+			message.Value = &gauge
 		}
 
 		if _, err := g.grpc.UpdateMetric(context.Background(), &message); err != nil {

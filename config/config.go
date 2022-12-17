@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net"
 	"strconv"
 	"time"
@@ -104,26 +105,38 @@ func (s *Config) setDefault(configPath string) error {
 
 func withHttpAddress(address string) Option {
 	return func(s *Config) {
-		if host, port, err := net.SplitHostPort(address); err == nil {
-			if port, err := strconv.ParseUint(port, 0, 16); err == nil {
-				s.Server.Address.Host = host
-				s.Server.Address.Port = uint16(port)
-			}
+		host, port, err := net.SplitHostPort(address)
+		if err != nil {
+			log.Fatal(err.Error())
 		}
+
+		value, err := strconv.ParseUint(port, 0, 16);
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+
+		s.Server.Address.Host = host
+		s.Server.Address.Port = uint16(value)
 	}
 }
 
 func withGrpcAddress(address string) Option {
 	return func(s *Config) {
-		if host, port, err := net.SplitHostPort(address); err == nil {
-			if port, err := strconv.ParseUint(port, 0, 16); err == nil {
-				s.Grpc = &GrpcConfig{
-					Address: Address{
-						Host: host,
-						Port: uint16(port),
-					},
-				}
-			}
+		host, port, err := net.SplitHostPort(address)
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+
+		value, err := strconv.ParseUint(port, 0, 16);
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+
+		s.Grpc = &GrpcConfig{
+			Address: Address{
+				Host: host,
+				Port: uint16(value),
+			},
 		}
 	}
 }
