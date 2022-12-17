@@ -40,7 +40,6 @@ func Update(metrics *store.MetricsStorage) http.HandlerFunc {
 		encoder := json.NewEncoder(w)
 		if err := encoder.Encode(payload); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
 		}
 	}
 }
@@ -76,7 +75,6 @@ func UpdateJSON(metrics *store.MetricsStorage, key *string) http.HandlerFunc {
 		encoder := json.NewEncoder(w)
 		if err := encoder.Encode(payload); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
 		}
 	}
 }
@@ -124,7 +122,6 @@ func UpdatesJSON(metrics *store.MetricsStorage, key *string, privateKey *rsa.Pri
 		encoder := json.NewEncoder(w)
 		if err := encoder.Encode(payloads[0]); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
 		}
 	}
 }

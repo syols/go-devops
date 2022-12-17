@@ -62,7 +62,6 @@ func Save(metrics *store.MetricsStorage) func(http.Handler) http.Handler {
 				err := metrics.Save(ctx)
 				if err != nil {
 					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
 				}
 			}
 		})
@@ -77,7 +76,6 @@ func CheckSubnet(trustedSubnet *string) func(http.Handler) http.Handler {
 		return func(next http.Handler) http.Handler {
 			return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				http.Error(w, "Trusted subnet contains incorrect data", http.StatusInternalServerError)
-				return
 			})
 		}
 	}

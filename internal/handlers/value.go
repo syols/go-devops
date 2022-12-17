@@ -39,7 +39,6 @@ func Value(metrics *store.MetricsStorage) http.HandlerFunc {
 
 		if _, err := w.Write([]byte(metric.Value())); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
 		}
 	}
 }
@@ -92,7 +91,6 @@ func ValueJSON(metrics *store.MetricsStorage) http.HandlerFunc {
 		encoder := json.NewEncoder(w)
 		if err := encoder.Encode(value); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
 		}
 	}
 }
